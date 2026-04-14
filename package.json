@@ -1,0 +1,26 @@
+{
+  "name": "quizgame",
+  "version": "0.1.0",
+  "description": "Cross-platform live quiz game built with Expo and Node.js",
+  "private": true,
+  "scripts": {
+    "dev:client": "npm run web -w @quizgame/client",
+    "dev:web": "npm run web -w @quizgame/client",
+    "dev:mobile": "npm run start -w @quizgame/client",
+    "dev:server": "npm run dev -w @quizgame/server",
+    "build": "npm run build -w @quizgame/contracts && npm run build -w @quizgame/server && npm run typecheck -w @quizgame/client",
+    "typecheck": "npm run build -w @quizgame/contracts && npm run typecheck -w @quizgame/server && npm run typecheck -w @quizgame/client",
+    "check": "npm run typecheck && npm run build"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "react-dom": "19.1.0",
+    "react-native-web": "^0.21.0"
+  }
+}

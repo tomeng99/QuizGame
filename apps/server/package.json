@@ -1,0 +1,25 @@
+{
+  "name": "@quizgame/server",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "npm run build -w @quizgame/contracts && tsx watch src/index.ts",
+    "prebuild": "npm run build -w @quizgame/contracts",
+    "build": "tsc -p tsconfig.json",
+    "pretypecheck": "npm run build -w @quizgame/contracts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@quizgame/contracts": "0.1.0",
+    "fastify": "^5.6.1",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

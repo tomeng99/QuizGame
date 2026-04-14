@@ -1,0 +1,16 @@
+services:
+  server:
+    image: ${SERVER_IMAGE:?SERVER_IMAGE is required}:${IMAGE_TAG:?IMAGE_TAG is required}
+    environment:
+      PORT: 3001
+      HOST: 0.0.0.0
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+    restart: unless-stopped
+
+  client:
+    image: ${CLIENT_IMAGE:?CLIENT_IMAGE is required}:${IMAGE_TAG:?IMAGE_TAG is required}
+    depends_on:
+      - server
+    ports:
+      - "${WEB_HTTP_PORT:-8080}:80"
+    restart: unless-stopped

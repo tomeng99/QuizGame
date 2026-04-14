@@ -1,0 +1,15 @@
+:80 {
+  root * /srv
+  encode zstd gzip
+
+  handle /socket.io* {
+    reverse_proxy server:3001
+  }
+
+  handle /health {
+    reverse_proxy server:3001
+  }
+
+  try_files {path} /index.html
+  file_server
+}

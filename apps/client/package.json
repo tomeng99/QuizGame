@@ -1,0 +1,32 @@
+{
+  "name": "@quizgame/client",
+  "version": "0.1.0",
+  "main": "index.ts",
+  "scripts": {
+    "prestart": "npm run build -w @quizgame/contracts",
+    "start": "expo start",
+    "preandroid": "npm run build -w @quizgame/contracts",
+    "android": "expo start --android",
+    "preios": "npm run build -w @quizgame/contracts",
+    "ios": "expo start --ios",
+    "preweb": "npm run build -w @quizgame/contracts",
+    "web": "expo start --web",
+    "preexport:web": "npm run build -w @quizgame/contracts",
+    "export:web": "expo export --platform web",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@quizgame/contracts": "0.1.0",
+    "expo": "~54.0.33",
+    "expo-constants": "~18.0.10",
+    "expo-status-bar": "~3.0.9",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}

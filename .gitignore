@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.expo/
+.DS_Store
+apps/client/.expo/
+apps/client/dist/
+apps/server/dist/
+packages/contracts/dist/
+.env
+.env.*
+!.env.example
