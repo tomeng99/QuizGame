@@ -52,34 +52,26 @@ Cross-platform live quiz app with one client codebase for **iOS, Android, and we
 
 - `main` is the production branch.
 - `dev` is the development/staging branch.
-- `.github/workflows/deploy.yml` deploys both branches, using **branch-specific secrets** so each branch can publish to its own hosted environment.
+- `.github/workflows/deploy.yml` deploys both branches to the same VPS, using `<APP_DIR>/prod` for `main` and `<APP_DIR>/dev` for `dev`.
 - The client expects `EXPO_PUBLIC_API_URL` during deployment, and the workflow builds separate branch-tagged GHCR images for client and server.
 
 ### Deploy secrets
 
-Production (`main`) branch secrets:
+VPS credentials (shared — same server for prod and dev):
 
-- `PROD_VPS_HOST`
-- `PROD_VPS_USER`
-- `PROD_VPS_SSH_KEY`
-- `PROD_VPS_PORT`
-- `PROD_APP_DIR`
-- `PROD_WEB_HTTP_PORT`
-- `PROD_ALLOWED_ORIGINS`
-- `PROD_EXPO_PUBLIC_API_URL`
+- `VPS_HOST`
+- `VPS_USER`
+- `VPS_SSH_KEY`
+- `VPS_PORT` _(optional, defaults to 22)_
+- `APP_DIR` _(base directory, e.g. `quizgame`; pipeline appends `/prod` or `/dev`)_
 
-Development (`dev`) branch secrets:
+Per-environment secrets (values differ between prod and dev):
 
-- `DEV_VPS_HOST`
-- `DEV_VPS_USER`
-- `DEV_VPS_SSH_KEY`
-- `DEV_VPS_PORT`
-- `DEV_APP_DIR`
-- `DEV_WEB_HTTP_PORT`
-- `DEV_ALLOWED_ORIGINS`
-- `DEV_EXPO_PUBLIC_API_URL`
+- `PROD_WEB_HTTP_PORT` / `DEV_WEB_HTTP_PORT`
+- `PROD_ALLOWED_ORIGINS` / `DEV_ALLOWED_ORIGINS`
+- `PROD_EXPO_PUBLIC_API_URL` / `DEV_EXPO_PUBLIC_API_URL`
 
-Shared secrets:
+GHCR credentials (shared):
 
 - `GHCR_USER`
 - `GHCR_PAT`
