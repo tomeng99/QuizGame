@@ -6,6 +6,14 @@
     reverse_proxy server:3001
   }
 
+  handle /api/* {
+    reverse_proxy server:3001
+  }
+
+  handle /uploads/* {
+    reverse_proxy server:3001
+  }
+
   handle /health {
     reverse_proxy server:3001
   }

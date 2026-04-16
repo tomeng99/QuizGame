@@ -68,6 +68,7 @@ VPS credentials (shared — same server for prod and dev):
 Per-environment secrets (values differ between prod and dev):
 
 - `PROD_WEB_HTTP_PORT` / `DEV_WEB_HTTP_PORT`
+- `PROD_SERVER_HTTP_PORT` / `DEV_SERVER_HTTP_PORT`
 - `PROD_ALLOWED_ORIGINS` / `DEV_ALLOWED_ORIGINS`
 - `PROD_EXPO_PUBLIC_API_URL` / `DEV_EXPO_PUBLIC_API_URL`
 
@@ -75,3 +76,29 @@ GHCR credentials (shared):
 
 - `GHCR_USER`
 - `GHCR_PAT`
+
+### Host reverse proxy routing
+
+When deploying behind a host-level Caddy reverse proxy (recommended), publish both containers on localhost-only ports and route backend paths directly to the backend service port:
+
+```caddy
+quiz.eng.software {
+    encode gzip zstd
+
+    @api path /api/*
+    reverse_proxy @api 127.0.0.1:3001
+
+    @socket path /socket.io/*
+    reverse_proxy @socket 127.0.0.1:3001
+
+    @uploads path /uploads/*
+    reverse_proxy @uploads 127.0.0.1:3001
+
+    @health path /health
+    reverse_proxy @health 127.0.0.1:3001
+
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+Use `PROD_WEB_HTTP_PORT` / `DEV_WEB_HTTP_PORT` for the frontend port and `PROD_SERVER_HTTP_PORT` / `DEV_SERVER_HTTP_PORT` for the backend port.

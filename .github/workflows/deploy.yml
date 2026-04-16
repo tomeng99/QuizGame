@@ -15,6 +15,7 @@ env:
   DEPLOY_PORT: ${{ secrets.VPS_PORT }}
   DEPLOY_DIR: ${{ secrets.APP_DIR }}/${{ github.ref_name == 'main' && 'prod' || 'dev' }}
   WEB_HTTP_PORT: ${{ github.ref_name == 'main' && secrets.PROD_WEB_HTTP_PORT || secrets.DEV_WEB_HTTP_PORT }}
+  SERVER_HTTP_PORT: ${{ github.ref_name == 'main' && secrets.PROD_SERVER_HTTP_PORT || secrets.DEV_SERVER_HTTP_PORT }}
   ALLOWED_ORIGINS: ${{ github.ref_name == 'main' && secrets.PROD_ALLOWED_ORIGINS || secrets.DEV_ALLOWED_ORIGINS }}
   EXPO_PUBLIC_API_URL: ${{ github.ref_name == 'main' && secrets.PROD_EXPO_PUBLIC_API_URL || secrets.DEV_EXPO_PUBLIC_API_URL }}
 
@@ -87,6 +88,7 @@ jobs:
             CLIENT_IMAGE=${{ env.CLIENT_IMAGE }}
             IMAGE_TAG=${{ steps.image-tag.outputs.value }}
             WEB_HTTP_PORT=${{ env.WEB_HTTP_PORT }}
+            SERVER_HTTP_PORT=${{ env.SERVER_HTTP_PORT }}
             ALLOWED_ORIGINS=${{ env.ALLOWED_ORIGINS }}
             EOF
             cd "${{ env.DEPLOY_DIR }}"
