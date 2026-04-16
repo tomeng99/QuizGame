@@ -9,11 +9,11 @@ on:
 env:
   SERVER_IMAGE: ghcr.io/${{ github.repository_owner }}/quizgame-server
   CLIENT_IMAGE: ghcr.io/${{ github.repository_owner }}/quizgame-client
-  DEPLOY_HOST: ${{ github.ref_name == 'main' && secrets.PROD_VPS_HOST || secrets.DEV_VPS_HOST }}
-  DEPLOY_USER: ${{ github.ref_name == 'main' && secrets.PROD_VPS_USER || secrets.DEV_VPS_USER }}
-  DEPLOY_KEY: ${{ github.ref_name == 'main' && secrets.PROD_VPS_SSH_KEY || secrets.DEV_VPS_SSH_KEY }}
-  DEPLOY_PORT: ${{ github.ref_name == 'main' && secrets.PROD_VPS_PORT || secrets.DEV_VPS_PORT }}
-  DEPLOY_DIR: ${{ github.ref_name == 'main' && secrets.PROD_APP_DIR || secrets.DEV_APP_DIR }}
+  DEPLOY_HOST: ${{ secrets.VPS_HOST }}
+  DEPLOY_USER: ${{ secrets.VPS_USER }}
+  DEPLOY_KEY: ${{ secrets.VPS_SSH_KEY }}
+  DEPLOY_PORT: ${{ secrets.VPS_PORT }}
+  DEPLOY_DIR: ${{ secrets.APP_DIR }}/${{ github.ref_name == 'main' && 'prod' || 'dev' }}
   WEB_HTTP_PORT: ${{ github.ref_name == 'main' && secrets.PROD_WEB_HTTP_PORT || secrets.DEV_WEB_HTTP_PORT }}
   ALLOWED_ORIGINS: ${{ github.ref_name == 'main' && secrets.PROD_ALLOWED_ORIGINS || secrets.DEV_ALLOWED_ORIGINS }}
   EXPO_PUBLIC_API_URL: ${{ github.ref_name == 'main' && secrets.PROD_EXPO_PUBLIC_API_URL || secrets.DEV_EXPO_PUBLIC_API_URL }}
