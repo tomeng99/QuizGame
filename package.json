@@ -17,10 +17,10 @@
     "packages/*"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "dependencies": {
-    "react-dom": "19.1.0",
+    "react-dom": "^19.2.0",
     "react-native-web": "^0.21.0"
   }
 }
