@@ -17,16 +17,16 @@
   },
   "dependencies": {
     "@quizgame/contracts": "0.1.0",
-    "expo": "~54.0.33",
-    "expo-constants": "~18.0.10",
-    "expo-status-bar": "~3.0.9",
-    "react": "19.1.0",
-    "react-native": "0.81.5",
-    "socket.io-client": "^4.8.1"
+    "expo": "^55.0.15",
+    "expo-constants": "~55.0.14",
+    "expo-status-bar": "~55.0.5",
+    "react": "19.2.0",
+    "react-native": "0.83.4",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
-    "typescript": "~5.9.2"
+    "@types/react": "^19.2.14",
+    "typescript": "^6.0.3"
   },
   "private": true
 }
