@@ -480,6 +480,9 @@ export const styles = StyleSheet.create({
     fontSize: fontSizes.lg,
     fontWeight: fontWeights.semibold,
   },
+  optionTextSelected: {
+    fontWeight: fontWeights.extrabold,
+  },
 
   /* ── Winner ── */
   winnerCard: {

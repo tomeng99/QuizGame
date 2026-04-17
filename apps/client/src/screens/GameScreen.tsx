@@ -4,7 +4,6 @@ import { styles } from "../styles";
 import { StatusChip, LeaderboardRow } from "../components";
 import { OPTION_THEMES } from "../constants";
 import type { ConnectionState, PendingAction } from "../types";
-import { fontWeights } from "../theme";
 
 interface GameScreenProps {
   room: RoomSnapshot;
@@ -211,7 +210,7 @@ export function GameScreen({
                   <Text
                     style={[
                       styles.optionText,
-                      selected && { fontWeight: fontWeights.extrabold },
+                      selected && styles.optionTextSelected,
                     ]}
                   >
                     {option.text}
