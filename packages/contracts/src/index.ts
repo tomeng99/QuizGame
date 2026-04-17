@@ -74,6 +74,17 @@ export interface ErrorMessagePayload {
   message: string;
 }
 
+export interface CheckRoomPayload {
+  roomCode: string;
+}
+
+export interface CheckRoomResult {
+  roomCode: string;
+  hostName: string;
+  quizTitle: string;
+  playerCount: number;
+}
+
 export const createEmptyQuestion = (index: number): QuizQuestion => ({
   id: `question-${index + 1}`,
   prompt: `Question ${index + 1}`,

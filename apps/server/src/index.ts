@@ -2,6 +2,8 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { Server, type Socket } from "socket.io";
 import {
+  CheckRoomPayload,
+  CheckRoomResult,
   HostCreateRoomPayload,
   LeaderboardEntry,
   PlayerJoinPayload,
@@ -223,6 +225,35 @@ const registerRealtimeHandlers = () => {
         playerId: socket.id,
         room: toSnapshot(room),
       });
+    });
+
+    socket.on("player:check-room", (payload: CheckRoomPayload) => {
+      const roomCode = payload.roomCode.trim().toUpperCase();
+      const room = rooms.get(roomCode);
+
+      if (!room) {
+        emitError(socket, "Room not found. Check the code and try again.");
+        return;
+      }
+
+      if (room.status === "question" || room.status === "leaderboard") {
+        emitError(socket, "This quiz has already started.");
+        return;
+      }
+
+      if (room.status === "finished") {
+        emitError(socket, "This quiz has already finished.");
+        return;
+      }
+
+      const result: CheckRoomResult = {
+        roomCode: room.code,
+        hostName: room.hostName,
+        quizTitle: room.quiz.title,
+        playerCount: room.players.size,
+      };
+
+      socket.emit("room:checked", result);
     });
 
     socket.on("player:join-room", (payload: PlayerJoinPayload) => {
