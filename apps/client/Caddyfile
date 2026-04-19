@@ -22,11 +22,9 @@
   header @hashedAssets Cache-Control "public, max-age=31536000, immutable"
 
   @entryShell {
-    not path /_expo/static/* /favicon.ico
+    not path /_expo/static/*
   }
   header @entryShell Cache-Control "no-cache, no-store, must-revalidate"
-  header @entryShell Pragma "no-cache"
-  header @entryShell Expires "0"
 
   try_files {path} /index.html
   file_server
