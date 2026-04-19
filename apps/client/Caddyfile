@@ -18,6 +18,16 @@
     reverse_proxy server:3001
   }
 
+  @hashedAssets path /_expo/static/*
+  header @hashedAssets Cache-Control "public, max-age=31536000, immutable"
+
+  @entryShell {
+    not path /_expo/static/* /favicon.ico
+  }
+  header @entryShell Cache-Control "no-cache, no-store, must-revalidate"
+  header @entryShell Pragma "no-cache"
+  header @entryShell Expires "0"
+
   try_files {path} /index.html
   file_server
 }

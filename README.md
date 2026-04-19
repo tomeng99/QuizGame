@@ -102,3 +102,5 @@ quiz.eng.software {
 ```
 
 Use `PROD_WEB_HTTP_PORT` / `DEV_WEB_HTTP_PORT` for the frontend port and `PROD_SERVER_HTTP_PORT` / `DEV_SERVER_HTTP_PORT` for the backend port.
+
+The client container Caddy config serves Expo's hashed web bundles from `/_expo/static/*` with long-lived immutable caching, while the HTML app shell (`index.html` and SPA fallback routes) is served with `no-cache` headers so browsers revalidate on each visit and pick up new deploys quickly.
