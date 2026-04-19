@@ -19,6 +19,7 @@ interface GameScreenProps {
   onRevealLeaderboard: () => void;
   onNextQuestion: () => void;
   onSubmitAnswer: () => void;
+  onBackToStart: () => void;
 }
 
 export function GameScreen({
@@ -35,6 +36,7 @@ export function GameScreen({
   onRevealLeaderboard,
   onNextQuestion,
   onSubmitAnswer,
+  onBackToStart,
 }: GameScreenProps) {
   const winner = room.leaderboard[0] ?? null;
 
@@ -140,9 +142,19 @@ export function GameScreen({
             </>
           )}
           {room.status === "finished" && (
-            <Text style={styles.controlsHint}>
-              {"\uD83C\uDFC6"} Quiz Complete!
-            </Text>
+            <>
+              <Text style={styles.controlsHint}>
+                {"\uD83C\uDFC6"} Quiz Complete!
+              </Text>
+              <Pressable
+                onPress={onBackToStart}
+                style={styles.secondaryBigButton}
+              >
+                <Text style={styles.secondaryBigButtonText}>
+                  Back to Start {"\uD83C\uDFE0"}
+                </Text>
+              </Pressable>
+            </>
           )}
         </View>
       )}
@@ -168,6 +180,14 @@ export function GameScreen({
         <View style={styles.waitingCard}>
           <Text style={styles.waitingEmoji}>{"\uD83C\uDF89"}</Text>
           <Text style={styles.waitingText}>Thanks for playing!</Text>
+          <Pressable
+            onPress={onBackToStart}
+            style={styles.secondaryBigButton}
+          >
+            <Text style={styles.secondaryBigButtonText}>
+              Back to Start {"\uD83C\uDFE0"}
+            </Text>
+          </Pressable>
         </View>
       )}
 
