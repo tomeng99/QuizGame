@@ -37,9 +37,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set image tag
+      - name: Set image tags
         id: image-tag
-        run: echo "value=${GITHUB_REF_NAME}-latest" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "deploy=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "rolling=${GITHUB_REF_NAME}-latest" >> "$GITHUB_OUTPUT"
 
       - name: Build and push server image
         uses: docker/build-push-action@v6
@@ -48,8 +50,8 @@ jobs:
           file: ./apps/server/Dockerfile
           push: true
           tags: |
-            ${{ env.SERVER_IMAGE }}:${{ steps.image-tag.outputs.value }}
-            ${{ env.SERVER_IMAGE }}:${{ github.sha }}
+            ${{ env.SERVER_IMAGE }}:${{ steps.image-tag.outputs.rolling }}
+            ${{ env.SERVER_IMAGE }}:${{ steps.image-tag.outputs.deploy }}
 
       - name: Build and push client image
         uses: docker/build-push-action@v6
@@ -58,8 +60,8 @@ jobs:
           file: ./apps/client/Dockerfile
           push: true
           tags: |
-            ${{ env.CLIENT_IMAGE }}:${{ steps.image-tag.outputs.value }}
-            ${{ env.CLIENT_IMAGE }}:${{ github.sha }}
+            ${{ env.CLIENT_IMAGE }}:${{ steps.image-tag.outputs.rolling }}
+            ${{ env.CLIENT_IMAGE }}:${{ steps.image-tag.outputs.deploy }}
           build-args: |
             EXPO_PUBLIC_API_URL=${{ env.EXPO_PUBLIC_API_URL }}
 
@@ -86,7 +88,7 @@ jobs:
             cat > "${{ env.DEPLOY_DIR }}/.env" <<EOF
             SERVER_IMAGE=${{ env.SERVER_IMAGE }}
             CLIENT_IMAGE=${{ env.CLIENT_IMAGE }}
-            IMAGE_TAG=${{ steps.image-tag.outputs.value }}
+            IMAGE_TAG=${{ steps.image-tag.outputs.deploy }}
             WEB_HTTP_PORT=${{ env.WEB_HTTP_PORT }}
             SERVER_HTTP_PORT=${{ env.SERVER_HTTP_PORT }}
             ALLOWED_ORIGINS=${{ env.ALLOWED_ORIGINS }}
