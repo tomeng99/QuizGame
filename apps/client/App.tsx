@@ -225,6 +225,10 @@ export default function App() {
             onRevealLeaderboard={revealLeaderboard}
             onNextQuestion={nextQuestion}
             onSubmitAnswer={submitAnswer}
+            onBackToStart={() => {
+              game.resetToStart();
+              game.setFeedback({ tone: "info", message: "Ready to play!" });
+            }}
           />
         )}
       </ScrollView>
