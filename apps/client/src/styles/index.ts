@@ -28,9 +28,6 @@ export const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingBottom: spacing.xs,
   },
-  logo: {
-    fontSize: fontSizes.logo,
-  },
   title: {
     color: colors.textPrimary,
     fontSize: fontSizes.title,
@@ -92,9 +89,6 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.xl,
     padding: spacing.heroCardPadding,
-  },
-  heroEmoji: {
-    fontSize: fontSizes.heroEmoji,
   },
   heroTitle: {
     color: colors.textPrimary,
@@ -417,9 +411,6 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.sectionPadding,
-  },
-  waitingEmoji: {
-    fontSize: 40,
   },
   waitingText: {
     color: colors.textLight,
