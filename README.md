@@ -54,6 +54,7 @@ Cross-platform live quiz app with one client codebase for **iOS, Android, and we
 - `dev` is the development/staging branch.
 - `.github/workflows/deploy.yml` deploys both branches to the same VPS, using `<APP_DIR>/prod` for `main` and `<APP_DIR>/dev` for `dev`.
 - The client expects `EXPO_PUBLIC_API_URL` during deployment, and the workflow builds separate branch-tagged GHCR images for client and server.
+- Deploys use commit-SHA image tags automatically, so each release points to an immutable image version without manual version bumping.
 
 ### Deploy secrets
 
@@ -102,3 +103,5 @@ quiz.eng.software {
 ```
 
 Use `PROD_WEB_HTTP_PORT` / `DEV_WEB_HTTP_PORT` for the frontend port and `PROD_SERVER_HTTP_PORT` / `DEV_SERVER_HTTP_PORT` for the backend port.
+
+The client container Caddy config serves Expo's hashed web bundles from `/_expo/static/*` with long-lived immutable caching, while the HTML app shell (`index.html` and SPA fallback routes) is served with `no-cache` headers so browsers revalidate on each visit and pick up new deploys quickly.

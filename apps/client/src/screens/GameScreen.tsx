@@ -19,6 +19,7 @@ interface GameScreenProps {
   onRevealLeaderboard: () => void;
   onNextQuestion: () => void;
   onSubmitAnswer: () => void;
+  onBackToStart: () => void;
 }
 
 export function GameScreen({
@@ -35,6 +36,7 @@ export function GameScreen({
   onRevealLeaderboard,
   onNextQuestion,
   onSubmitAnswer,
+  onBackToStart,
 }: GameScreenProps) {
   const winner = room.leaderboard[0] ?? null;
 
@@ -44,7 +46,7 @@ export function GameScreen({
       <View style={styles.gameHeader}>
         <View style={styles.gameHeaderInfo}>
           <Text style={styles.gameTitle}>
-            {"\uD83E\uDDE0"} {room.quizTitle}
+            {room.quizTitle}
           </Text>
           <Text style={styles.gameSubtitle}>
             Room {room.roomCode} {"\u2022"} {room.players.length} player
@@ -85,8 +87,8 @@ export function GameScreen({
               >
                 <Text style={styles.bigButtonText}>
                   {pendingAction === "start-game"
-                    ? "Starting..."
-                    : "Start Quiz \u26A1"}
+                    ? "starting..."
+                    : "Start quiz"}
                 </Text>
               </Pressable>
             </>
@@ -94,7 +96,7 @@ export function GameScreen({
           {room.status === "question" && (
             <>
               <Text style={styles.controlsHint}>
-                {"\u23F3"} Question is live
+                Question is live
               </Text>
               <Text style={styles.controlsMeta}>
                 {answeredCount} of {room.players.length} answered
@@ -109,8 +111,8 @@ export function GameScreen({
               >
                 <Text style={styles.secondaryBigButtonText}>
                   {pendingAction === "show-leaderboard"
-                    ? "Revealing..."
-                    : "Show Scores \uD83D\uDCCA"}
+                    ? "revealing..."
+                    : "Show scores"}
                 </Text>
               </Pressable>
             </>
@@ -118,7 +120,7 @@ export function GameScreen({
           {room.status === "leaderboard" && (
             <>
               <Text style={styles.controlsHint}>
-                {"\uD83D\uDCCA"} Scores revealed
+                Scores revealed
               </Text>
               <Pressable
                 disabled={pendingAction !== null}
@@ -130,19 +132,29 @@ export function GameScreen({
               >
                 <Text style={styles.bigButtonText}>
                   {pendingAction === "next-question"
-                    ? "Loading..."
+                    ? "loading..."
                     : room.currentQuestionIndex ===
                         room.totalQuestions - 1
-                      ? "Finish Quiz \uD83C\uDFC1"
-                      : "Next Question \u26A1"}
+                      ? "Finish quiz"
+                      : "Next question"}
                 </Text>
               </Pressable>
             </>
           )}
           {room.status === "finished" && (
-            <Text style={styles.controlsHint}>
-              {"\uD83C\uDFC6"} Quiz Complete!
-            </Text>
+            <>
+              <Text style={styles.controlsHint}>
+                Quiz complete!
+              </Text>
+              <Pressable
+                onPress={onBackToStart}
+                style={styles.secondaryBigButton}
+              >
+                <Text style={styles.secondaryBigButtonText}>
+                  Back to start
+                </Text>
+              </Pressable>
+            </>
           )}
         </View>
       )}
@@ -150,7 +162,6 @@ export function GameScreen({
       {/* Player waiting states */}
       {!isHost && room.status === "lobby" && (
         <View style={styles.waitingCard}>
-          <Text style={styles.waitingEmoji}>{"\u23F3"}</Text>
           <Text style={styles.waitingText}>
             You're in! Waiting for {room.hostName} to start...
           </Text>
@@ -158,7 +169,6 @@ export function GameScreen({
       )}
       {!isHost && room.status === "leaderboard" && !currentQuestion && (
         <View style={styles.waitingCard}>
-          <Text style={styles.waitingEmoji}>{"\uD83D\uDCCA"}</Text>
           <Text style={styles.waitingText}>
             Check the scores below!
           </Text>
@@ -166,8 +176,15 @@ export function GameScreen({
       )}
       {!isHost && room.status === "finished" && (
         <View style={styles.waitingCard}>
-          <Text style={styles.waitingEmoji}>{"\uD83C\uDF89"}</Text>
           <Text style={styles.waitingText}>Thanks for playing!</Text>
+          <Pressable
+            onPress={onBackToStart}
+            style={styles.secondaryBigButton}
+          >
+            <Text style={styles.secondaryBigButtonText}>
+              Back to start
+            </Text>
+          </Pressable>
         </View>
       )}
 
@@ -239,10 +256,10 @@ export function GameScreen({
             >
               <Text style={styles.bigButtonText}>
                 {hasAnsweredCurrentQuestion
-                  ? "Answer Locked In \u2705"
+                  ? "Answer locked in"
                   : pendingAction === "submit-answer"
-                    ? "Sending..."
-                    : "Lock In Answer \uD83D\uDD12"}
+                    ? "sending..."
+                    : "Lock in answer"}
               </Text>
             </Pressable>
           )}
@@ -253,8 +270,8 @@ export function GameScreen({
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>
           {room.status === "finished"
-            ? "\uD83C\uDFC6 Final Results"
-            : "\uD83D\uDCCA Leaderboard"}
+            ? "Final Results"
+            : "Leaderboard"}
         </Text>
 
         {winner && room.status === "finished" && (

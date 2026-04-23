@@ -12,8 +12,6 @@ export const fontSizes = {
   hero: 26,
   title: 34,
   display: 42,
-  logo: 48,
-  heroEmoji: 52,
 } as const;
 
 export const fontWeights = {

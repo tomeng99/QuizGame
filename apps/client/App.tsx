@@ -142,7 +142,6 @@ export default function App() {
         {/* Header (hidden during game) */}
         {game.screen !== "game" && (
           <View style={styles.headerContainer}>
-            <Text style={styles.logo}>{"\uD83E\uDDE0"}</Text>
             <Text style={styles.title}>QuizGame</Text>
             {game.screen === "join-code" && (
               <Text style={styles.subtitle}>Join a live quiz in seconds</Text>
@@ -225,6 +224,10 @@ export default function App() {
             onRevealLeaderboard={revealLeaderboard}
             onNextQuestion={nextQuestion}
             onSubmitAnswer={submitAnswer}
+            onBackToStart={() => {
+              game.resetToStart();
+              game.setFeedback({ tone: "info", message: "Ready to play!" });
+            }}
           />
         )}
       </ScrollView>
