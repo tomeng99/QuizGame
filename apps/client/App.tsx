@@ -86,7 +86,7 @@ export default function App() {
   };
 
   const submitAnswer = () => {
-    if (!game.room || !game.selectedOptionId || hasAnsweredCurrentQuestion) {
+    if (!game.room || !game.selectedOptionId || game.hasAnsweredCurrentQuestion) {
       return;
     }
     game.setPendingAction("submit-answer");
@@ -98,21 +98,6 @@ export default function App() {
   };
 
   /* ── Derived state ── */
-
-  const answeredCount = useMemo(
-    () =>
-      game.room?.leaderboard.filter((e) => e.answeredCurrentQuestion).length ??
-      0,
-    [game.room],
-  );
-
-  const hasAnsweredCurrentQuestion = useMemo(() => {
-    if (!game.room || !game.sessionPlayerId) return false;
-    return game.room.leaderboard.some(
-      (e) =>
-        e.playerId === game.sessionPlayerId && e.answeredCurrentQuestion,
-    );
-  }, [game.room, game.sessionPlayerId]);
 
   const canCheckRoom =
     game.connectionState === "connected" &&
@@ -217,8 +202,8 @@ export default function App() {
             pendingAction={game.pendingAction}
             currentQuestion={game.currentQuestion}
             selectedOptionId={game.selectedOptionId}
-            hasAnsweredCurrentQuestion={hasAnsweredCurrentQuestion}
-            answeredCount={answeredCount}
+            hasAnsweredCurrentQuestion={game.hasAnsweredCurrentQuestion}
+            answeredCount={game.answeredCount}
             onSelectOption={game.setSelectedOptionId}
             onStartGame={startGame}
             onRevealLeaderboard={revealLeaderboard}
