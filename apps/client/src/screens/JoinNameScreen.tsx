@@ -26,7 +26,6 @@ export function JoinNameScreen({
   return (
     <>
       <View style={styles.heroCard}>
-        <Text style={styles.heroEmoji}>{"\uD83D\uDC4B"}</Text>
         <Text style={styles.heroTitle}>You're joining</Text>
         <View style={styles.roomInfoBadge}>
           <Text style={styles.roomInfoTitle}>
@@ -59,8 +58,8 @@ export function JoinNameScreen({
         >
           <Text style={styles.bigButtonText}>
             {pendingAction === "join-room"
-              ? "Joining..."
-              : "Let's Go! \uD83C\uDF89"}
+              ? "joining..."
+              : "Let's go"}
           </Text>
         </Pressable>
       </View>

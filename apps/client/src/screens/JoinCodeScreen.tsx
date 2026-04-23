@@ -23,7 +23,6 @@ export function JoinCodeScreen({
   return (
     <>
       <View style={styles.heroCard}>
-        <Text style={styles.heroEmoji}>{"\uD83C\uDFAE"}</Text>
         <Text style={styles.heroTitle}>Enter Game Code</Text>
         <Text style={styles.heroSubtitle}>
           Ask your host for the 6-character room code
@@ -48,8 +47,8 @@ export function JoinCodeScreen({
         >
           <Text style={styles.bigButtonText}>
             {pendingAction === "check-room"
-              ? "Looking..."
-              : "Join Game \uD83D\uDE80"}
+              ? "looking..."
+              : "Join game"}
           </Text>
         </Pressable>
       </View>

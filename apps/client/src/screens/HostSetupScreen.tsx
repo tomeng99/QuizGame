@@ -41,9 +41,7 @@ export function HostSetupScreen({
   return (
     <>
       <View style={styles.editorHeader}>
-        <Text style={styles.editorTitle}>
-          {"\uD83D\uDCDD"} Create Your Quiz
-        </Text>
+        <Text style={styles.editorTitle}>Create Your Quiz</Text>
         <Text style={styles.editorSubtitle}>
           Build something fun for your players
         </Text>
@@ -95,7 +93,7 @@ export function HostSetupScreen({
         <View style={styles.issueCard}>
           {quizIssues.map((issue) => (
             <Text key={issue} style={styles.issueText}>
-              {"\u26A0\uFE0F"} {issue}
+              {issue}
             </Text>
           ))}
         </View>
@@ -111,8 +109,8 @@ export function HostSetupScreen({
       >
         <Text style={styles.bigButtonText}>
           {pendingAction === "create-room"
-            ? "Creating..."
-            : "Go Live! \uD83C\uDFAC"}
+            ? "creating..."
+            : "Go live"}
         </Text>
       </Pressable>
 

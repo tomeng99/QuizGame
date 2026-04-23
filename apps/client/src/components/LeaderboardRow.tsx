@@ -35,8 +35,8 @@ export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps
           {roomStatus === "question" ? (
             <Text style={styles.playerMeta}>
               {entry.answeredCurrentQuestion
-                ? "\u2705 Answered"
-                : "\u23F3 Thinking..."}
+                ? "Answered"
+                : "Thinking..."}
             </Text>
           ) : null}
         </View>
