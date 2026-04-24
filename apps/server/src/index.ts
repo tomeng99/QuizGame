@@ -230,15 +230,17 @@ const validateHostCreateRoomPayload = (
   return true;
 };
 
-const validateRoomCodePayload = (payload: unknown): payload is { roomCode: string } => {
+const validateRoomCodePayload = (payload: unknown): payload is CheckRoomPayload => {
   if (!isObject(payload)) return false;
-  return isString(payload.roomCode) && payload.roomCode.length <= MAX_ROOM_CODE_LENGTH;
+  if (!isString(payload.roomCode) || payload.roomCode.length > MAX_ROOM_CODE_LENGTH) return false;
+  return true;
 };
 
 const validatePlayerJoinPayload = (payload: unknown): payload is PlayerJoinPayload => {
   if (!isObject(payload)) return false;
   if (!isString(payload.roomCode) || payload.roomCode.length > MAX_ROOM_CODE_LENGTH) return false;
-  return isString(payload.name) && payload.name.length <= MAX_NAME_LENGTH;
+  if (!isString(payload.name) || payload.name.length > MAX_NAME_LENGTH) return false;
+  return true;
 };
 
 const validateRoomCodeString = (value: unknown): value is string =>
@@ -247,7 +249,8 @@ const validateRoomCodeString = (value: unknown): value is string =>
 const validateSubmitAnswerPayload = (payload: unknown): payload is SubmitAnswerPayload => {
   if (!isObject(payload)) return false;
   if (!isString(payload.roomCode) || payload.roomCode.length > MAX_ROOM_CODE_LENGTH) return false;
-  return isString(payload.optionId) && payload.optionId.length <= MAX_OPTION_ID_LENGTH;
+  if (!isString(payload.optionId) || payload.optionId.length > MAX_OPTION_ID_LENGTH) return false;
+  return true;
 };
 
 const registerRealtimeHandlers = () => {
