@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { Server, type Socket } from "socket.io";
@@ -14,6 +15,22 @@ import {
   RoomSnapshot,
   SubmitAnswerPayload,
 } from "@quizgame/contracts";
+
+const MAX_ROOMS = 500;
+const MAX_NAME_LENGTH = 50;
+const MAX_TITLE_LENGTH = 100;
+const MAX_PROMPT_LENGTH = 500;
+const MAX_OPTION_TEXT_LENGTH = 200;
+const MAX_ID_LENGTH = 100;
+const MAX_ROOM_CODE_LENGTH = 20;
+const MAX_OPTION_ID_LENGTH = 100;
+const MAX_QUESTIONS = 50;
+const MAX_OPTIONS_PER_QUESTION = 8;
+
+const isString = (v: unknown): v is string => typeof v === "string";
+const isArray = (v: unknown): v is unknown[] => Array.isArray(v);
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
 
 interface StoredPlayer {
   id: string;
@@ -53,7 +70,7 @@ const randomCode = () => {
   let code = "";
 
   for (let index = 0; index < 6; index += 1) {
-    code += alphabet[Math.floor(Math.random() * alphabet.length)];
+    code += alphabet[randomInt(alphabet.length)];
   }
 
   return code;
@@ -189,9 +206,63 @@ const emitError = (socket: Socket, message: string) => {
   socket.emit("error:message", { message });
 };
 
+const validateHostCreateRoomPayload = (
+  payload: unknown,
+): payload is HostCreateRoomPayload => {
+  if (!isObject(payload)) return false;
+  if (!isString(payload.hostName) || payload.hostName.length > MAX_NAME_LENGTH) return false;
+  if (!isObject(payload.quiz)) return false;
+  const quiz = payload.quiz;
+  if (!isString(quiz.title) || quiz.title.length > MAX_TITLE_LENGTH) return false;
+  if (!isArray(quiz.questions) || quiz.questions.length > MAX_QUESTIONS) return false;
+  for (const q of quiz.questions) {
+    if (!isObject(q)) return false;
+    if (!isString(q.id) || q.id.length > MAX_ID_LENGTH) return false;
+    if (!isString(q.prompt) || q.prompt.length > MAX_PROMPT_LENGTH) return false;
+    if (!isString(q.correctOptionId) || q.correctOptionId.length > MAX_ID_LENGTH) return false;
+    if (!isArray(q.options) || q.options.length > MAX_OPTIONS_PER_QUESTION) return false;
+    for (const opt of q.options) {
+      if (!isObject(opt)) return false;
+      if (!isString(opt.id) || opt.id.length > MAX_ID_LENGTH) return false;
+      if (!isString(opt.text) || opt.text.length > MAX_OPTION_TEXT_LENGTH) return false;
+    }
+  }
+  return true;
+};
+
+const validateRoomCodePayload = (payload: unknown): payload is { roomCode: string } => {
+  if (!isObject(payload)) return false;
+  return isString(payload.roomCode) && payload.roomCode.length <= MAX_ROOM_CODE_LENGTH;
+};
+
+const validatePlayerJoinPayload = (payload: unknown): payload is PlayerJoinPayload => {
+  if (!isObject(payload)) return false;
+  if (!isString(payload.roomCode) || payload.roomCode.length > MAX_ROOM_CODE_LENGTH) return false;
+  return isString(payload.name) && payload.name.length <= MAX_NAME_LENGTH;
+};
+
+const validateRoomCodeString = (value: unknown): value is string =>
+  isString(value) && value.length <= MAX_ROOM_CODE_LENGTH;
+
+const validateSubmitAnswerPayload = (payload: unknown): payload is SubmitAnswerPayload => {
+  if (!isObject(payload)) return false;
+  if (!isString(payload.roomCode) || payload.roomCode.length > MAX_ROOM_CODE_LENGTH) return false;
+  return isString(payload.optionId) && payload.optionId.length <= MAX_OPTION_ID_LENGTH;
+};
+
 const registerRealtimeHandlers = () => {
   io.on("connection", (socket) => {
-    socket.on("host:create-room", (payload: HostCreateRoomPayload) => {
+    socket.on("host:create-room", (payload: unknown) => {
+      if (!validateHostCreateRoomPayload(payload)) {
+        emitError(socket, "Invalid payload.");
+        return;
+      }
+
+      if (rooms.size >= MAX_ROOMS) {
+        emitError(socket, "Server is at capacity. Try again later.");
+        return;
+      }
+
       const quiz = normalizeQuiz(payload.quiz);
       const hostName = payload.hostName.trim();
 
@@ -227,7 +298,12 @@ const registerRealtimeHandlers = () => {
       });
     });
 
-    socket.on("player:check-room", (payload: CheckRoomPayload) => {
+    socket.on("player:check-room", (payload: unknown) => {
+      if (!validateRoomCodePayload(payload)) {
+        emitError(socket, "Invalid payload.");
+        return;
+      }
+
       const roomCode = payload.roomCode.trim().toUpperCase();
       const room = rooms.get(roomCode);
 
@@ -256,7 +332,12 @@ const registerRealtimeHandlers = () => {
       socket.emit("room:checked", result);
     });
 
-    socket.on("player:join-room", (payload: PlayerJoinPayload) => {
+    socket.on("player:join-room", (payload: unknown) => {
+      if (!validatePlayerJoinPayload(payload)) {
+        emitError(socket, "Invalid payload.");
+        return;
+      }
+
       const roomCode = payload.roomCode.trim().toUpperCase();
       const room = rooms.get(roomCode);
 
@@ -310,7 +391,12 @@ const registerRealtimeHandlers = () => {
       emitRoomUpdate(room);
     });
 
-    socket.on("host:start-game", (roomCode: string) => {
+    socket.on("host:start-game", (roomCode: unknown) => {
+      if (!validateRoomCodeString(roomCode)) {
+        emitError(socket, "Invalid payload.");
+        return;
+      }
+
       const room = rooms.get(roomCode.toUpperCase());
 
       if (!room || room.hostSocketId !== socket.id) {
@@ -331,7 +417,12 @@ const registerRealtimeHandlers = () => {
       startQuestion(room, 0);
     });
 
-    socket.on("host:show-leaderboard", (roomCode: string) => {
+    socket.on("host:show-leaderboard", (roomCode: unknown) => {
+      if (!validateRoomCodeString(roomCode)) {
+        emitError(socket, "Invalid payload.");
+        return;
+      }
+
       const room = rooms.get(roomCode.toUpperCase());
 
       if (!room || room.hostSocketId !== socket.id) {
@@ -347,7 +438,12 @@ const registerRealtimeHandlers = () => {
       emitLeaderboard(room);
     });
 
-    socket.on("host:next-question", (roomCode: string) => {
+    socket.on("host:next-question", (roomCode: unknown) => {
+      if (!validateRoomCodeString(roomCode)) {
+        emitError(socket, "Invalid payload.");
+        return;
+      }
+
       const room = rooms.get(roomCode.toUpperCase());
 
       if (!room || room.hostSocketId !== socket.id) {
@@ -370,7 +466,12 @@ const registerRealtimeHandlers = () => {
       startQuestion(room, nextIndex);
     });
 
-    socket.on("player:submit-answer", (payload: SubmitAnswerPayload) => {
+    socket.on("player:submit-answer", (payload: unknown) => {
+      if (!validateSubmitAnswerPayload(payload)) {
+        emitError(socket, "Invalid payload.");
+        return;
+      }
+
       const room = rooms.get(payload.roomCode.toUpperCase());
 
       if (!room || room.status !== "question" || room.currentQuestionIndex === null) {

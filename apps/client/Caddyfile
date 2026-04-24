@@ -2,15 +2,19 @@
   root * /srv
   encode zstd gzip
 
+  header {
+    X-Frame-Options "DENY"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    X-XSS-Protection "1; mode=block"
+    Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  }
+
   handle /socket.io* {
     reverse_proxy server:3001
   }
 
   handle /api/* {
-    reverse_proxy server:3001
-  }
-
-  handle /uploads/* {
     reverse_proxy server:3001
   }
 
