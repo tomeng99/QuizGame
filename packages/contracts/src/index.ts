@@ -85,6 +85,25 @@ export interface CheckRoomResult {
   playerCount: number;
 }
 
+export interface AnswerCountPayload {
+  answeredCount: number;
+  totalPlayers: number;
+}
+
+export interface RoomRejoinedPayload {
+  room: RoomSnapshot;
+  currentQuestion: PublicQuestion | null;
+  isHost: boolean;
+}
+
+export interface PlayerReconnectPayload {
+  token: string;
+}
+
+export interface HostReconnectPayload {
+  token: string;
+}
+
 export const createEmptyQuestion = (index: number): QuizQuestion => ({
   id: `question-${index + 1}`,
   prompt: `Question ${index + 1}`,
