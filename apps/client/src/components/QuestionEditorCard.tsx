@@ -26,10 +26,20 @@ export function QuestionEditorCard({
   return (
     <View style={styles.editorQuestionCard}>
       <View style={styles.editorQuestionHeader}>
-        <View style={styles.editorQuestionBadge}>
-          <Text style={styles.editorQuestionBadgeText}>
-            Q{questionIndex + 1}
-          </Text>
+        <View style={styles.editorQuestionHeading}>
+          <View style={styles.editorQuestionBadge}>
+            <Text style={styles.editorQuestionBadgeText}>
+              Q{questionIndex + 1}
+            </Text>
+          </View>
+          <View style={styles.editorQuestionHeaderText}>
+            <Text style={styles.editorQuestionTitle}>
+              Question {questionIndex + 1}
+            </Text>
+            <Text style={styles.editorQuestionDescription}>
+              Keep it short, clear, and easy to answer on a phone.
+            </Text>
+          </View>
         </View>
         {canRemove ? (
           <Pressable onPress={onRemove} style={styles.removeButton}>
@@ -37,51 +47,84 @@ export function QuestionEditorCard({
           </Pressable>
         ) : null}
       </View>
+
+      <Text style={styles.inputLabel}>Question prompt</Text>
       <TextInput
         multiline
         onChangeText={onPromptChange}
-        placeholder="Write your question..."
+        placeholder="What should your players answer?"
         placeholderTextColor={colors.textMuted}
         style={[styles.input, styles.multilineInput]}
         value={question.prompt}
       />
+
+      <View style={styles.editorOptionsHeader}>
+        <Text style={styles.inputLabel}>Answers</Text>
+        <Text style={styles.editorOptionHint}>
+          Tap "Correct" on the right answer
+        </Text>
+      </View>
+
       {question.options.map((option, optionIndex) => {
         const theme = OPTION_THEMES[optionIndex % OPTION_THEMES.length];
         const isCorrect = question.correctOptionId === option.id;
 
         return (
-          <View key={option.id} style={styles.editorOptionRow}>
-            <Pressable
-              onPress={() => onCorrectOptionChange(option.id)}
+          <View
+            key={option.id}
+            style={[
+              styles.editorOptionCard,
+              {
+                borderColor: isCorrect ? colors.successBright : `${theme.bg}55`,
+                backgroundColor: isCorrect ? `${colors.successBright}12` : colors.bgInput,
+              },
+            ]}
+          >
+            <View
               style={[
-                styles.correctPicker,
+                styles.editorOptionBadge,
                 {
-                  backgroundColor: isCorrect
-                    ? colors.successBright
-                    : `${theme.bg}30`,
-                  borderColor: isCorrect
-                    ? colors.successBright
-                    : `${theme.bg}60`,
+                  backgroundColor: `${theme.bg}22`,
+                  borderColor: `${theme.bg}66`,
                 },
               ]}
             >
-              <Text style={styles.correctPickerText}>
-                {isCorrect ? "\u2713" : theme.icon}
+              <Text style={[styles.editorOptionBadgeText, { color: theme.bg }]}>
+                {theme.label}
               </Text>
-            </Pressable>
-            <TextInput
-              onChangeText={(value) => onOptionChange(optionIndex, value)}
-              placeholder={`Option ${optionIndex + 1}`}
-              placeholderTextColor={colors.textMuted}
-              style={[styles.input, styles.editorOptionInput]}
-              value={option.text}
-            />
+            </View>
+            <View style={styles.editorOptionContent}>
+              <TextInput
+                onChangeText={(value) => onOptionChange(optionIndex, value)}
+                placeholder={
+                  optionIndex === 0
+                    ? "Correct answer"
+                    : `Alternative option ${optionIndex + 1}`
+                }
+                placeholderTextColor={colors.textMuted}
+                style={styles.editorOptionInputText}
+                value={option.text}
+              />
+              <Pressable
+                onPress={() => onCorrectOptionChange(option.id)}
+                style={[
+                  styles.correctToggle,
+                  isCorrect && styles.correctToggleActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.correctToggleText,
+                    isCorrect && styles.correctToggleTextActive,
+                  ]}
+                >
+                  {isCorrect ? "Correct" : "Mark correct"}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         );
       })}
-      <Text style={styles.editorOptionHint}>
-        Tap a circle to mark the correct answer
-      </Text>
     </View>
   );
 }

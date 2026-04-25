@@ -106,29 +106,17 @@ export interface HostReconnectPayload {
 
 export const createEmptyQuestion = (index: number): QuizQuestion => ({
   id: `question-${index + 1}`,
-  prompt: `Question ${index + 1}`,
+  prompt: "",
   options: [
-    { id: `q${index + 1}-a`, text: "Option 1" },
-    { id: `q${index + 1}-b`, text: "Option 2" },
-    { id: `q${index + 1}-c`, text: "Option 3" },
-    { id: `q${index + 1}-d`, text: "Option 4" },
+    { id: `q${index + 1}-a`, text: "" },
+    { id: `q${index + 1}-b`, text: "" },
+    { id: `q${index + 1}-c`, text: "" },
+    { id: `q${index + 1}-d`, text: "" },
   ],
   correctOptionId: `q${index + 1}-a`,
 });
 
 export const createStarterQuiz = (): QuizDraft => ({
-  title: "Friday Quiz Night",
-  questions: [
-    {
-      id: "question-1",
-      prompt: "Which technology is usually the most practical base for realtime multiplayer quiz logic?",
-      options: [
-        { id: "q1-a", text: "Client-server with realtime sockets" },
-        { id: "q1-b", text: "Pure email" },
-        { id: "q1-c", text: "Spreadsheet sync" },
-        { id: "q1-d", text: "Manual scorekeeping only" }
-      ],
-      correctOptionId: "q1-a"
-    }
-  ]
+  title: "",
+  questions: [createEmptyQuestion(0)],
 });

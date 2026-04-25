@@ -1,11 +1,24 @@
 import { useState } from "react";
 import { createEmptyQuestion, createStarterQuiz, type QuizDraft } from "@quizgame/contracts";
 
+const QUESTION_ID_PATTERN = /^question-(\d+)$/;
+
+const getNextQuestionSeed = (quiz: QuizDraft) =>
+  quiz.questions.reduce((highestSeed, question) => {
+    const match = QUESTION_ID_PATTERN.exec(question.id);
+    const numericId = match ? Number(match[1]) : 0;
+
+    return Math.max(highestSeed, numericId);
+  }, 0);
+
 export interface QuizEditor {
   quiz: QuizDraft;
   setQuiz: React.Dispatch<React.SetStateAction<QuizDraft>>;
   hostName: string;
   setHostName: React.Dispatch<React.SetStateAction<string>>;
+  selectedQuestionIndex: number;
+  setSelectedQuestionIndex: React.Dispatch<React.SetStateAction<number>>;
+  updateQuizTitle: (title: string) => void;
   updateQuestionPrompt: (questionIndex: number, prompt: string) => void;
   updateQuestionOption: (questionIndex: number, optionIndex: number, text: string) => void;
   setCorrectOption: (questionIndex: number, optionId: string) => void;
@@ -14,8 +27,13 @@ export interface QuizEditor {
 }
 
 export function useQuizEditor(): QuizEditor {
-  const [hostName, setHostName] = useState("Quiz Host");
+  const [hostName, setHostName] = useState("");
   const [quiz, setQuiz] = useState<QuizDraft>(createStarterQuiz());
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
+
+  const updateQuizTitle = (title: string) => {
+    setQuiz((current) => ({ ...current, title }));
+  };
 
   const updateQuestionPrompt = (questionIndex: number, prompt: string) => {
     setQuiz((current) => ({
@@ -58,16 +76,21 @@ export function useQuizEditor(): QuizEditor {
   };
 
   const addQuestion = () => {
+    setSelectedQuestionIndex(quiz.questions.length);
     setQuiz((current) => ({
       ...current,
       questions: [
         ...current.questions,
-        createEmptyQuestion(current.questions.length),
+        createEmptyQuestion(getNextQuestionSeed(current)),
       ],
     }));
   };
 
   const removeQuestion = (questionId: string) => {
+    const removedIndex = quiz.questions.findIndex(
+      (question) => question.id === questionId,
+    );
+
     setQuiz((current) => {
       if (current.questions.length === 1) {
         return current;
@@ -80,6 +103,16 @@ export function useQuizEditor(): QuizEditor {
         ),
       };
     });
+
+    if (removedIndex >= 0) {
+      setSelectedQuestionIndex((current) => {
+        if (current > removedIndex) {
+          return current - 1;
+        }
+
+        return Math.min(current, quiz.questions.length - 2);
+      });
+    }
   };
 
   return {
@@ -87,6 +120,9 @@ export function useQuizEditor(): QuizEditor {
     setQuiz,
     hostName,
     setHostName,
+    selectedQuestionIndex,
+    setSelectedQuestionIndex,
+    updateQuizTitle,
     updateQuestionPrompt,
     updateQuestionOption,
     setCorrectOption,

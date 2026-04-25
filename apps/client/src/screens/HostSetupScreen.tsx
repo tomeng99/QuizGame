@@ -9,6 +9,8 @@ interface HostSetupScreenProps {
   hostName: string;
   onHostNameChange: (text: string) => void;
   quiz: QuizDraft;
+  selectedQuestionIndex: number;
+  onSelectQuestion: (questionIndex: number) => void;
   onQuizTitleChange: (title: string) => void;
   onPromptChange: (questionIndex: number, prompt: string) => void;
   onOptionChange: (questionIndex: number, optionIndex: number, text: string) => void;
@@ -26,6 +28,8 @@ export function HostSetupScreen({
   hostName,
   onHostNameChange,
   quiz,
+  selectedQuestionIndex,
+  onSelectQuestion,
   onQuizTitleChange,
   onPromptChange,
   onOptionChange,
@@ -38,20 +42,38 @@ export function HostSetupScreen({
   onCreateRoom,
   onBack,
 }: HostSetupScreenProps) {
+  const activeQuestionIndex = Math.min(
+    selectedQuestionIndex,
+    quiz.questions.length - 1,
+  );
+  const activeQuestion = quiz.questions[activeQuestionIndex];
+  const readyQuestionCount = quiz.questions.filter((question) => {
+    const filledOptions = question.options.filter((option) => option.text.trim());
+
+    return question.prompt.trim().length > 0 && filledOptions.length >= 2;
+  }).length;
+
   return (
     <>
       <View style={styles.editorHeader}>
         <Text style={styles.editorTitle}>Create Your Quiz</Text>
         <Text style={styles.editorSubtitle}>
-          Build something fun for your players
+          Start with a blank canvas and build one question at a time.
         </Text>
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, styles.editorBasicsCard]}>
+        <View style={styles.editorSectionHeader}>
+          <Text style={styles.sectionTitle}>Quiz details</Text>
+          <Text style={styles.editorSectionText}>
+            Add the basics first, then move through your questions without the
+            usual clutter.
+          </Text>
+        </View>
         <Text style={styles.inputLabel}>Host name</Text>
         <TextInput
           onChangeText={onHostNameChange}
-          placeholder="Your name"
+          placeholder="Alex"
           placeholderTextColor={colors.textMuted}
           style={styles.input}
           value={hostName}
@@ -66,31 +88,99 @@ export function HostSetupScreen({
         />
       </View>
 
-      {quiz.questions.map((question, questionIndex) => (
-        <QuestionEditorCard
-          key={question.id}
-          canRemove={quiz.questions.length > 1}
-          onCorrectOptionChange={(optionId) =>
-            onCorrectOptionChange(questionIndex, optionId)
-          }
-          onOptionChange={(optionIndex, text) =>
-            onOptionChange(questionIndex, optionIndex, text)
-          }
-          onPromptChange={(prompt) =>
-            onPromptChange(questionIndex, prompt)
-          }
-          onRemove={() => onRemoveQuestion(question.id)}
-          question={question}
-          questionIndex={questionIndex}
-        />
-      ))}
+      <View style={[styles.card, styles.editorOverviewCard]}>
+        <View style={styles.editorOverviewHeader}>
+          <View style={styles.editorSectionHeader}>
+            <Text style={styles.sectionTitle}>Questions</Text>
+            <Text style={styles.editorSectionText}>
+              Jump between questions, keep only one in focus, and mark the
+              correct answer with a single tap.
+            </Text>
+          </View>
+          <Pressable onPress={onAddQuestion} style={styles.addQuestionInlineButton}>
+            <Text style={styles.addQuestionInlineText}>+ New question</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.editorStatsRow}>
+          <View style={styles.editorStatPill}>
+            <Text style={styles.editorStatValue}>{quiz.questions.length}</Text>
+            <Text style={styles.editorStatLabel}>total</Text>
+          </View>
+          <View style={styles.editorStatPill}>
+            <Text style={styles.editorStatValue}>{readyQuestionCount}</Text>
+            <Text style={styles.editorStatLabel}>ready</Text>
+          </View>
+          <View style={styles.editorStatPill}>
+            <Text style={styles.editorStatValue}>
+              {quiz.questions.length - readyQuestionCount}
+            </Text>
+            <Text style={styles.editorStatLabel}>drafting</Text>
+          </View>
+        </View>
+
+        <View style={styles.editorQuestionTabs}>
+          {quiz.questions.map((question, questionIndex) => {
+            const isSelected = questionIndex === activeQuestionIndex;
+            const filledOptions = question.options.filter((option) =>
+              option.text.trim(),
+            );
+            const isReady =
+              question.prompt.trim().length > 0 && filledOptions.length >= 2;
+
+            return (
+              <Pressable
+                key={question.id}
+                onPress={() => onSelectQuestion(questionIndex)}
+                style={[
+                  styles.editorQuestionTab,
+                  isSelected && styles.editorQuestionTabActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.editorQuestionTabTitle,
+                    isSelected && styles.editorQuestionTabTitleActive,
+                  ]}
+                >
+                  Q{questionIndex + 1}
+                </Text>
+                <Text
+                  style={[
+                    styles.editorQuestionTabMeta,
+                    isSelected && styles.editorQuestionTabMetaActive,
+                  ]}
+                >
+                  {isReady ? "Ready" : "Draft"}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      <QuestionEditorCard
+        key={activeQuestion.id}
+        canRemove={quiz.questions.length > 1}
+        onCorrectOptionChange={(optionId) =>
+          onCorrectOptionChange(activeQuestionIndex, optionId)
+        }
+        onOptionChange={(optionIndex, text) =>
+          onOptionChange(activeQuestionIndex, optionIndex, text)
+        }
+        onPromptChange={(prompt) => onPromptChange(activeQuestionIndex, prompt)}
+        onRemove={() => onRemoveQuestion(activeQuestion.id)}
+        question={activeQuestion}
+        questionIndex={activeQuestionIndex}
+      />
 
       <Pressable onPress={onAddQuestion} style={styles.addQuestionButton}>
-        <Text style={styles.addQuestionText}>+ Add Question</Text>
+        <Text style={styles.addQuestionText}>+ Add another question</Text>
       </Pressable>
 
       {quizIssues.length > 0 && (
         <View style={styles.issueCard}>
+          <Text style={styles.issueTitle}>Still needed before you go live</Text>
           {quizIssues.map((issue) => (
             <Text key={issue} style={styles.issueText}>
               {issue}
