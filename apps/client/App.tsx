@@ -174,9 +174,9 @@ export default function App() {
             hostName={editor.hostName}
             onHostNameChange={editor.setHostName}
             quiz={editor.quiz}
-            onQuizTitleChange={(title) =>
-              editor.setQuiz((prev) => ({ ...prev, title }))
-            }
+            selectedQuestionIndex={editor.selectedQuestionIndex}
+            onSelectQuestion={editor.setSelectedQuestionIndex}
+            onQuizTitleChange={editor.updateQuizTitle}
             onPromptChange={editor.updateQuestionPrompt}
             onOptionChange={editor.updateQuestionOption}
             onCorrectOptionChange={editor.setCorrectOption}
