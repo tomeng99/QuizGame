@@ -550,6 +550,32 @@ export const styles = StyleSheet.create({
     letterSpacing: 6,
     textAlign: "center",
   },
+  qrPanel: {
+    alignItems: "center",
+    gap: spacing.md,
+    width: "100%",
+  },
+  qrFrame: {
+    backgroundColor: colors.textWhite,
+    borderRadius: radii.xl,
+    padding: spacing.md,
+  },
+  qrImage: {
+    height: 220,
+    width: 220,
+  },
+  qrCaption: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.body,
+    textAlign: "center",
+  },
+  joinUrlText: {
+    color: colors.textPurpleLight,
+    fontSize: fontSizes.body,
+    fontWeight: fontWeights.semibold,
+    textAlign: "center",
+    width: "100%",
+  },
 
   /* ── Player waiting ── */
   waitingCard: {

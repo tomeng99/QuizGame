@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import type {
   AnswerCountPayload,
@@ -9,7 +9,7 @@ import type {
   RoomRejoinedPayload,
   RoomSnapshot,
 } from "@quizgame/contracts";
-import { API_BASE } from "../config";
+import { API_BASE, clearRoomCodeFromUrl, getRoomCodeFromUrl } from "../config";
 import type {
   ConnectionState,
   FeedbackState,
@@ -41,6 +41,8 @@ export interface GameState {
   setPlayerName: React.Dispatch<React.SetStateAction<string>>;
   checkedRoom: CheckRoomResult | null;
   setCheckedRoom: React.Dispatch<React.SetStateAction<CheckRoomResult | null>>;
+  sharedRoomCode: string | null;
+  consumeSharedRoomCode: () => void;
 
   /* ── Room / game ── */
   room: RoomSnapshot | null;
@@ -73,9 +75,10 @@ export function useGameState(): GameState {
   const pendingReconnectRef = useRef<boolean>(false);
 
   const [screen, setScreen] = useState<Screen>("join-code");
-  const [roomCodeInput, setRoomCodeInput] = useState("");
+  const [roomCodeInput, setRoomCodeInput] = useState(() => getRoomCodeFromUrl() ?? "");
   const [playerName, setPlayerName] = useState("");
   const [checkedRoom, setCheckedRoom] = useState<CheckRoomResult | null>(null);
+  const [sharedRoomCode, setSharedRoomCode] = useState<string | null>(() => getRoomCodeFromUrl());
 
   const [room, setRoom] = useState<RoomSnapshot | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<PublicQuestion | null>(null);
@@ -130,6 +133,11 @@ export function useGameState(): GameState {
     } catch {}
   };
 
+  const consumeSharedRoomCode = useCallback(() => {
+    clearRoomCodeFromUrl();
+    setSharedRoomCode(null);
+  }, []);
+
   const loadSession = (): { token: string; role: "host" | "player" } | null => {
     try {
       if (typeof sessionStorage !== "undefined") {
@@ -150,6 +158,7 @@ export function useGameState(): GameState {
     setSelectedOptionId(null);
     setSessionPlayerId(null);
     setCheckedRoom(null);
+    setSharedRoomCode(null);
     setIsHost(false);
     setAnsweredCount(0);
     setHasAnsweredCurrentQuestion(false);
@@ -237,7 +246,7 @@ export function useGameState(): GameState {
         setIsHost(true);
         setFeedback({
           tone: "success",
-          message: `Room ${payload.room.roomCode} is live! Share the code with players.`,
+          message: `Room ${payload.room.roomCode} is live! Players can scan the QR code or use the room code.`,
         });
       } else {
         setIsHost(false);
@@ -374,6 +383,8 @@ export function useGameState(): GameState {
     setPlayerName,
     checkedRoom,
     setCheckedRoom,
+    sharedRoomCode,
+    consumeSharedRoomCode,
     room,
     setRoom,
     currentQuestion,
