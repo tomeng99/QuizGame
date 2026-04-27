@@ -11,6 +11,9 @@ interface LeaderboardRowProps {
 
 export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps) {
   const medal = MEDALS[index] ?? null;
+
+  // Show the "+N pts" delta only after the question has closed (leaderboard or finished),
+  // and only when the player actually scored something this round (0-point rounds are noise).
   const showDelta = (roomStatus === "leaderboard" || roomStatus === "finished") && entry.pointsEarnedThisRound > 0;
 
   return (
@@ -33,6 +36,7 @@ export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps
           >
             {entry.name}
           </Text>
+          {/* Show live "Answered / Thinking..." status while the question is active. */}
           {roomStatus === "question" ? (
             <Text style={styles.playerMeta}>
               {entry.answeredCurrentQuestion
@@ -40,6 +44,8 @@ export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps
                 : "Thinking..."}
             </Text>
           ) : null}
+          {/* Only render the streak badge when the player has 2+ consecutive correct answers.
+              A streak of 1 doesn't feel like a streak worth highlighting. */}
           {entry.streak >= 2 ? (
             <View style={styles.streakBadge}>
               <Text style={styles.streakBadgeText}>
@@ -58,6 +64,7 @@ export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps
         >
           {entry.score}
         </Text>
+        {/* Score delta — lets lower-ranked players see they can still catch up. */}
         {showDelta ? (
           <Text style={styles.scoreDelta}>+{entry.pointsEarnedThisRound}</Text>
         ) : null}

@@ -94,7 +94,13 @@ export function useGameState(): GameState {
 
   const [answeredCount, setAnsweredCount] = useState(0);
   const [hasAnsweredCurrentQuestion, setHasAnsweredCurrentQuestion] = useState(false);
+  // Populated by the "answer:accepted" socket event. Carries isCorrect, pointsEarned, and
+  // current streak so the GameScreen can render immediate feedback to the player.
+  // Reset to null at the start of every new question.
   const [lastAnswerResult, setLastAnswerResult] = useState<AnswerAcceptedPayload | null>(null);
+  // Populated by the "question:revealed" socket event emitted by the server just before
+  // "leaderboard:update". Carries the correctOptionId so the client can highlight options.
+  // Reset to null at the start of every new question.
   const [questionReveal, setQuestionReveal] = useState<QuestionRevealPayload | null>(null);
 
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
@@ -320,12 +326,16 @@ export function useGameState(): GameState {
     });
 
     // Narrow event: the server confirms this player's answer was accepted.
+    // Payload carries isCorrect, pointsEarned, and the new streak value so the
+    // GameScreen can show a contextual result card without a full snapshot round-trip.
     socket.on("answer:accepted", (payload: AnswerAcceptedPayload) => {
       setHasAnsweredCurrentQuestion(true);
       setLastAnswerResult(payload);
     });
 
-    // Reveals the correct answer after the question closes (time up or host action).
+    // The server emits "question:revealed" immediately before "leaderboard:update"
+    // whenever a question closes (either all players answered or the timer expired).
+    // We store the correctOptionId so the option buttons can highlight green/red.
     socket.on("question:revealed", (payload: QuestionRevealPayload) => {
       setQuestionReveal(payload);
     });

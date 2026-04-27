@@ -5,6 +5,8 @@ import { colors } from "../theme";
 import { QuestionEditorCard } from "../components";
 import type { PendingAction } from "../types";
 
+// Available time limits in seconds. A `const` tuple lets TypeScript infer the
+// literal types, which makes it safe to use the values directly in onTimeLimitChange.
 const TIME_LIMIT_OPTIONS = [15, 20, 30, 45, 60] as const;
 
 interface HostSetupScreenProps {
@@ -91,6 +93,9 @@ export function HostSetupScreen({
           value={quiz.title}
         />
         <Text style={styles.inputLabel}>Time per question</Text>
+        {/* Pill selector for the per-question countdown. The selected value is
+            applied quiz-wide — every question uses the same limit.
+            The active pill is visually distinguished with a purple accent border. */}
         <View style={styles.timeLimitRow}>
           {TIME_LIMIT_OPTIONS.map((seconds) => (
             <Pressable

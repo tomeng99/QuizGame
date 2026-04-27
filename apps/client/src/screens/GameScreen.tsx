@@ -55,18 +55,25 @@ export function GameScreen({
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
 
   // ── Countdown timer ────────────────────────────────────────────────────────
+  // Client-side display only. The server is the authority: it schedules its own
+  // setTimeout and will fire emitLeaderboard regardless of what this interval does.
+  // The two clocks may drift by a frame or two but that is acceptable — the server
+  // result is always canonical.
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   useEffect(() => {
+    // Reset and stop the timer whenever there is no active question.
     if (!currentQuestion || room.status !== "question") {
       setSecondsLeft(null);
       return;
     }
 
+    // Seed from the server-supplied timeLimit so the client and server start together.
     setSecondsLeft(currentQuestion.timeLimit);
 
     const interval = setInterval(() => {
       setSecondsLeft((prev) => {
+        // Stop the interval from within the state updater to avoid stale-closure issues.
         if (prev === null || prev <= 1) {
           clearInterval(interval);
           return 0;
@@ -75,14 +82,18 @@ export function GameScreen({
       });
     }, 1000);
 
+    // Clean up on unmount or when the question/status changes.
     return () => clearInterval(interval);
   }, [currentQuestion, room.status]);
 
+  // Fraction of time remaining (1.0 = full, 0.0 = expired), used to drive the
+  // progress-bar width and color transitions.
   const timerFraction =
     currentQuestion && secondsLeft !== null
       ? secondsLeft / currentQuestion.timeLimit
       : 1;
 
+  // Shift the bar from green → orange → red as urgency increases.
   const timerColor =
     timerFraction > 0.5
       ? colors.successBright
@@ -343,10 +354,19 @@ export function GameScreen({
                 OPTION_THEMES[optionIndex % OPTION_THEMES.length];
               const selected = selectedOptionId === option.id;
               const answered = hasAnsweredCurrentQuestion;
+
+              // questionReveal is set when the server emits "question:revealed" (on leaderboard).
+              // Once revealed, we override the normal selection colours to show green/red feedback.
               const isRevealed = questionReveal !== null;
               const isCorrectOption = isRevealed && option.id === questionReveal?.correctOptionId;
+              // Only highlight the player's own wrong pick — other wrong options stay muted.
               const isMyWrongAnswer = isRevealed && selected && !isCorrectOption;
 
+              // Build dynamic background/border colours for the four option states:
+              //   1. Correct answer (post-reveal)    → green tint
+              //   2. My wrong answer (post-reveal)   → red tint
+              //   3. Selected by me (pre-reveal)     → full theme colour
+              //   4. Unselected / other              → 15% theme colour
               const bgColor = isCorrectOption
                 ? `${colors.successBright}33`
                 : isMyWrongAnswer
@@ -371,6 +391,8 @@ export function GameScreen({
                   style={[
                     styles.optionButton,
                     { backgroundColor: bgColor, borderColor },
+                    // After the player answers, dim all non-selected and non-correct options
+                    // so focus shifts to the selected/correct ones.
                     answered && !selected && !isCorrectOption && { opacity: 0.4 },
                   ]}
                 >
@@ -383,9 +405,11 @@ export function GameScreen({
                   >
                     {option.text}
                   </Text>
+                  {/* Checkmark on the correct option after reveal */}
                   {isCorrectOption && (
                     <Text style={styles.optionRevealIcon}>{"\u2705"}</Text>
                   )}
+                  {/* Cross on the player's own wrong pick after reveal */}
                   {isMyWrongAnswer && (
                     <Text style={styles.optionRevealIcon}>{"\u274C"}</Text>
                   )}
@@ -394,7 +418,10 @@ export function GameScreen({
             })}
           </View>
 
-          {/* Answer result — shown after the player submits */}
+          {/* Answer result — shown immediately after the player locks in their answer.
+              The card is player-only (hosts see aggregate progress instead).
+              lastAnswerResult is populated by the "answer:accepted" socket event and
+              cleared when a new question starts. */}
           {!isHost && hasAnsweredCurrentQuestion && lastAnswerResult && (
             <View
               style={[
@@ -410,11 +437,13 @@ export function GameScreen({
               <Text style={styles.answerResultText}>
                 {lastAnswerResult.isCorrect ? "Correct!" : "Wrong answer"}
               </Text>
+              {/* Only show the point value when correct; wrong answers earn nothing. */}
               {lastAnswerResult.isCorrect && (
                 <Text style={styles.answerResultPoints}>
                   +{lastAnswerResult.pointsEarned} points
                 </Text>
               )}
+              {/* Streak bonus message — only shown when the player is on a multi-answer streak. */}
               {lastAnswerResult.isCorrect && lastAnswerResult.streak >= 2 && (
                 <Text style={styles.answerResultStreak}>
                   {"\uD83D\uDD25"} {lastAnswerResult.streak}x streak bonus!

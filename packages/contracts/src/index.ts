@@ -98,6 +98,11 @@ export interface AnswerCountPayload {
   totalPlayers: number;
 }
 
+/**
+ * Emitted exclusively to the player who just submitted an answer ("answer:accepted").
+ * Gives the client everything it needs to render a result card immediately, without
+ * waiting for the full room snapshot that arrives with "leaderboard:update".
+ */
 export interface AnswerAcceptedPayload {
   isCorrect: boolean;
   pointsEarned: number;
@@ -105,6 +110,11 @@ export interface AnswerAcceptedPayload {
   streak: number;
 }
 
+/**
+ * Emitted to every client in the room just before "leaderboard:update".
+ * Lets the client highlight the correct option in green (and the player's wrong
+ * pick in red) while the leaderboard is on screen.
+ */
 export interface QuestionRevealPayload {
   /** The option ID that was the correct answer for the question just scored. */
   correctOptionId: string;

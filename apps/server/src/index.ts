@@ -180,8 +180,12 @@ const normalizeQuestion = (question: unknown, index: number): QuizQuestion | nul
 const normalizeQuiz = (raw: unknown): QuizDraft => {
   const q = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
   const title = isString(q.title) ? q.title.trim().slice(0, 200) : "";
+
+  // Accept any numeric timeLimit from the client, but clamp it to a safe [10, 120] second range
+  // and round to a whole number. Falls back to 30 s when the field is absent or non-numeric.
   const rawTimeLimit = typeof q.timeLimit === "number" ? q.timeLimit : 30;
   const timeLimit = Math.max(10, Math.min(120, Math.round(rawTimeLimit)));
+
   const rawQuestions = Array.isArray(q.questions) ? q.questions : [];
   return {
     title: title || "Untitled Quiz",
@@ -206,6 +210,8 @@ const toLeaderboard = (room: StoredRoom): LeaderboardEntry[] =>
         room.currentQuestionIndex !== null &&
         player.lastAnsweredQuestionId === room.quiz.questions[room.currentQuestionIndex]?.id,
       streak: player.streak,
+      // Compute the net points earned this round by diffing against the pre-question snapshot.
+      // This gives the client a "score delta" without needing a separate event.
       pointsEarnedThisRound: player.score - player.scoreBeforeCurrentQuestion,
     }));
 
@@ -303,7 +309,9 @@ const emitError = (socket: Socket, message: string) => {
 // ── Game lifecycle ────────────────────────────────────────────────────────────
 
 const startQuestion = (room: StoredRoom, questionIndex: number) => {
-  // Cancel any previous auto-advance timer before starting a new question.
+  // Guard: cancel any previous auto-advance timer before starting a new question.
+  // This prevents an edge case where a rapid "next question" from the host could
+  // fire the leaderboard event on the newly-started question.
   if (room.questionAutoTimer !== null) {
     clearTimeout(room.questionAutoTimer);
     room.questionAutoTimer = null;
@@ -314,6 +322,8 @@ const startQuestion = (room: StoredRoom, questionIndex: number) => {
   room.status = "question";
 
   for (const player of room.players.values()) {
+    // Snapshot each player's score at question start so we can compute pointsEarnedThisRound
+    // when building the leaderboard entry after the question closes.
     player.scoreBeforeCurrentQuestion = player.score;
     player.lastAnsweredQuestionId = null;
   }
@@ -328,7 +338,8 @@ const startQuestion = (room: StoredRoom, questionIndex: number) => {
   );
   emitRoomUpdate(room);
 
-  // Auto-advance to leaderboard when the time limit expires.
+  // Schedule the server-side auto-advance. When all players answer early the manual
+  // path (emitLeaderboard) cancels this timer, so it only fires if time genuinely runs out.
   room.questionAutoTimer = setTimeout(() => {
     if (room.status === "question") {
       app.log.info({ roomCode: room.code, questionIndex }, "question timed out — auto-advancing");
@@ -829,6 +840,7 @@ const registerRealtimeHandlers = () => {
 
       player.lastAnsweredQuestionId = question.id;
 
+      // Default to wrong — overwritten below if the answer is correct.
       let isCorrect = false;
       let pointsEarned = 0;
 
@@ -836,11 +848,16 @@ const registerRealtimeHandlers = () => {
         isCorrect = true;
         player.streak += 1;
 
+        // Time-based scoring: a player who answers at the very start earns 1000 pts,
+        // and a player who answers right at the limit earns 300 pts (the floor).
+        // timeFraction is clamped to [0, 1] to guard against clock skew / network lag.
         const elapsedMs = Math.max(0, Date.now() - (room.questionStartedAt ?? Date.now()));
         const timeFraction = Math.min(elapsedMs / (room.quiz.timeLimit * 1000), 1);
         const basePoints = Math.max(300, Math.round(1000 - 700 * timeFraction)); // 1000 → 300 over time
 
         // Streak bonus: each consecutive correct answer rewards the player more.
+        // Thresholds are intentionally generous to keep the mechanic exciting without
+        // being unbalancing (max bonus is 300 pts on top of a 1000 pt question).
         const streakBonus =
           player.streak >= 5 ? 300
           : player.streak >= 3 ? 150
@@ -850,10 +867,12 @@ const registerRealtimeHandlers = () => {
         pointsEarned = basePoints + streakBonus;
         player.score += pointsEarned;
       } else {
+        // Any wrong answer breaks the streak back to zero immediately.
         player.streak = 0;
       }
 
       // Acknowledge the answer to the answering player with result details.
+      // We emit only to the sender — other players learn who answered via emitAnswerCount.
       const acceptedPayload: AnswerAcceptedPayload = {
         isCorrect,
         pointsEarned,
