@@ -1,7 +1,8 @@
 import { StatusBar } from "expo-status-bar";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { SafeAreaView, ScrollView, Text, View } from "react-native";
 
+import { getJoinUrl } from "./src/config";
 import { useGameState, useQuizEditor } from "./src/hooks";
 import { FeedbackBanner, StatusChip } from "./src/components";
 import { JoinCodeScreen, JoinNameScreen, HostSetupScreen, GameScreen } from "./src/screens";
@@ -13,17 +14,23 @@ export default function App() {
   const editor = useQuizEditor();
 
   const quizIssues = useMemo(() => validateQuiz(editor.quiz), [editor.quiz]);
+  const joinUrl = useMemo(
+    () => (game.room ? getJoinUrl(game.room.roomCode) : null),
+    [game.room],
+  );
 
   /* ── Socket-driven actions ── */
 
-  const checkRoom = () => {
-    if (game.connectionState !== "connected" || !game.roomCodeInput.trim()) {
+  const checkRoom = (roomCode = game.roomCodeInput) => {
+    const normalizedRoomCode = roomCode.trim().toUpperCase();
+
+    if (game.connectionState !== "connected" || !normalizedRoomCode) {
       return;
     }
     game.setPendingAction("check-room");
     game.setFeedback({ tone: "info", message: "Looking for room..." });
     game.socketRef.current?.emit("player:check-room", {
-      roomCode: game.roomCodeInput.trim().toUpperCase(),
+      roomCode: normalizedRoomCode,
     });
   };
 
@@ -96,6 +103,36 @@ export default function App() {
       optionId: game.selectedOptionId,
     });
   };
+
+  useEffect(() => {
+    if (
+      !game.sharedRoomCode ||
+      game.connectionState !== "connected" ||
+      game.pendingAction !== null ||
+      game.room ||
+      game.checkedRoom ||
+      game.screen !== "join-code"
+    ) {
+      return;
+    }
+
+    const roomCode = game.sharedRoomCode;
+    game.consumeSharedRoomCode();
+    game.setPendingAction("check-room");
+    game.setFeedback({ tone: "info", message: "Opening shared room..." });
+    game.socketRef.current?.emit("player:check-room", { roomCode });
+  }, [
+    game.checkedRoom,
+    game.connectionState,
+    game.consumeSharedRoomCode,
+    game.pendingAction,
+    game.room,
+    game.screen,
+    game.sharedRoomCode,
+    game.socketRef,
+    game.setFeedback,
+    game.setPendingAction,
+  ]);
 
   /* ── Derived state ── */
 
@@ -201,6 +238,7 @@ export default function App() {
             connectionState={game.connectionState}
             pendingAction={game.pendingAction}
             currentQuestion={game.currentQuestion}
+            joinUrl={joinUrl}
             selectedOptionId={game.selectedOptionId}
             hasAnsweredCurrentQuestion={game.hasAnsweredCurrentQuestion}
             answeredCount={game.answeredCount}

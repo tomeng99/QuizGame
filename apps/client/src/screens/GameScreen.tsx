@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Image, Pressable, Text, View } from "react-native";
 import type { PublicQuestion, RoomSnapshot } from "@quizgame/contracts";
 import { styles } from "../styles";
 import { StatusChip, LeaderboardRow } from "../components";
@@ -11,6 +12,7 @@ interface GameScreenProps {
   connectionState: ConnectionState;
   pendingAction: PendingAction;
   currentQuestion: PublicQuestion | null;
+  joinUrl: string | null;
   selectedOptionId: string | null;
   hasAnsweredCurrentQuestion: boolean;
   answeredCount: number;
@@ -28,6 +30,7 @@ export function GameScreen({
   connectionState,
   pendingAction,
   currentQuestion,
+  joinUrl,
   selectedOptionId,
   hasAnsweredCurrentQuestion,
   answeredCount,
@@ -39,6 +42,43 @@ export function GameScreen({
   onBackToStart,
 }: GameScreenProps) {
   const winner = room.leaderboard[0] ?? null;
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!joinUrl) {
+      setQrCodeDataUrl(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const generateQrCode = async () => {
+      const { default: QRCode } = await import("qrcode");
+      const nextQrCodeDataUrl = await QRCode.toDataURL(joinUrl, {
+        errorCorrectionLevel: "M",
+        margin: 1,
+        width: 256,
+      });
+
+      if (!cancelled) {
+        setQrCodeDataUrl(nextQrCodeDataUrl);
+      }
+    };
+
+    void generateQrCode().catch((error: unknown) => {
+      console.error("Failed to generate room QR code.", error);
+
+      if (!cancelled) {
+        setQrCodeDataUrl(null);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [joinUrl]);
 
   return (
     <>
@@ -65,8 +105,37 @@ export function GameScreen({
           {room.status === "lobby" && (
             <>
               <Text style={styles.controlsHint}>
-                Share this code with your players
+                Scan to join instantly
               </Text>
+              {qrCodeDataUrl && (
+                <View style={styles.qrPanel}>
+                  <View style={styles.qrFrame}>
+                    <Image
+                      source={{ uri: qrCodeDataUrl }}
+                      style={styles.qrImage}
+                    />
+                  </View>
+                  <Text style={styles.qrCaption}>
+                    Players can scan this with their phone and land straight on
+                    the join screen.
+                  </Text>
+                </View>
+              )}
+              {joinUrl ? (
+                <>
+                  <Text style={styles.controlsMeta}>
+                    Or open this join link directly
+                  </Text>
+                  <Text selectable style={styles.joinUrlText}>
+                    {joinUrl}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.controlsMeta}>
+                  Share the room code below with your players.
+                </Text>
+              )}
+              <Text style={styles.controlsMeta}>Manual fallback</Text>
               <Text style={styles.bigRoomCode}>{room.roomCode}</Text>
               <Text style={styles.controlsMeta}>
                 {room.players.length === 0
