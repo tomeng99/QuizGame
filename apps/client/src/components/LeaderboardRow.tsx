@@ -49,7 +49,7 @@ export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps
           ) : null}
         </View>
       </View>
-      <View style={{ alignItems: "flex-end" }}>
+      <View style={styles.scoreColumn}>
         <Text
           style={[
             styles.leaderboardScore,

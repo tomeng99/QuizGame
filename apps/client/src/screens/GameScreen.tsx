@@ -384,10 +384,10 @@ export function GameScreen({
                     {option.text}
                   </Text>
                   {isCorrectOption && (
-                    <Text style={{ fontSize: 18 }}>{"\u2705"}</Text>
+                    <Text style={styles.optionRevealIcon}>{"\u2705"}</Text>
                   )}
                   {isMyWrongAnswer && (
-                    <Text style={{ fontSize: 18 }}>{"\u274C"}</Text>
+                    <Text style={styles.optionRevealIcon}>{"\u274C"}</Text>
                   )}
                 </Pressable>
               );

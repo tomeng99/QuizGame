@@ -847,4 +847,12 @@ export const styles = StyleSheet.create({
   scoreDeltaZero: {
     color: colors.textMuted,
   },
+
+  /* ── Small icon helpers ── */
+  optionRevealIcon: {
+    fontSize: 18,
+  },
+  scoreColumn: {
+    alignItems: "flex-end" as const,
+  },
 });

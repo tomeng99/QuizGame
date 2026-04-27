@@ -838,7 +838,7 @@ const registerRealtimeHandlers = () => {
 
         const elapsedMs = Math.max(0, Date.now() - (room.questionStartedAt ?? Date.now()));
         const timeFraction = Math.min(elapsedMs / (room.quiz.timeLimit * 1000), 1);
-        const basePoints = Math.round(1000 - 700 * timeFraction); // 1000 → 300 over time
+        const basePoints = Math.max(300, Math.round(1000 - 700 * timeFraction)); // 1000 → 300 over time
 
         // Streak bonus: each consecutive correct answer rewards the player more.
         const streakBonus =
