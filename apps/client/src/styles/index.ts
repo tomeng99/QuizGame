@@ -650,6 +650,97 @@ export const styles = StyleSheet.create({
     fontWeight: fontWeights.extrabold,
   },
 
+  /* ── Countdown timer ── */
+  timerBar: {
+    height: 8,
+    borderRadius: radii.full,
+    backgroundColor: colors.bgSurface,
+    overflow: "hidden",
+  },
+  timerBarFill: {
+    height: "100%",
+    borderRadius: radii.full,
+  },
+  timerRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+  },
+  timerLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.bold,
+    minWidth: 36,
+    textAlign: "right",
+  },
+
+  /* ── Answer result (shown after submitting) ── */
+  answerResultCard: {
+    alignItems: "center",
+    borderRadius: radii.xl,
+    gap: spacing.xs,
+    paddingVertical: spacing.xl,
+  },
+  answerResultCorrect: {
+    backgroundColor: `${colors.successBright}22`,
+    borderColor: colors.successBright,
+    borderWidth: 1,
+  },
+  answerResultWrong: {
+    backgroundColor: `${colors.errorBright}18`,
+    borderColor: colors.errorBright,
+    borderWidth: 1,
+  },
+  answerResultEmoji: {
+    fontSize: 28,
+  },
+  answerResultText: {
+    color: colors.textPrimary,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.extrabold,
+    textAlign: "center",
+  },
+  answerResultPoints: {
+    color: colors.textPurpleLight,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+    textAlign: "center",
+  },
+  answerResultStreak: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.body,
+    textAlign: "center",
+  },
+
+  /* ── Time limit picker (host setup) ── */
+  timeLimitRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+    flexWrap: "wrap",
+  },
+  timeLimitOption: {
+    backgroundColor: colors.bgInput,
+    borderColor: colors.borderInput,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: spacing.xl,
+  },
+  timeLimitOptionActive: {
+    backgroundColor: colors.bgPurpleDark,
+    borderColor: colors.accent,
+  },
+  timeLimitOptionText: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.body,
+    fontWeight: fontWeights.bold,
+  },
+  timeLimitOptionTextActive: {
+    color: colors.textPurpleLight,
+  },
+
   /* ── Winner ── */
   winnerCard: {
     alignItems: "center",
@@ -727,5 +818,33 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSizes.sm,
     marginTop: spacing.xxs,
+  },
+
+  /* ── Streak indicator ── */
+  streakBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: `${colors.optionOrange}22`,
+    borderColor: `${colors.optionOrange}66`,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    marginTop: spacing.xxs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 2,
+  },
+  streakBadgeText: {
+    color: colors.optionOrange,
+    fontSize: fontSizes.xs,
+    fontWeight: fontWeights.bold,
+  },
+
+  /* ── Score delta ── */
+  scoreDelta: {
+    color: colors.successBright,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.bold,
+    textAlign: "right",
+  },
+  scoreDeltaZero: {
+    color: colors.textMuted,
   },
 });

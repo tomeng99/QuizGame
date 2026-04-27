@@ -5,6 +5,8 @@ import { colors } from "../theme";
 import { QuestionEditorCard } from "../components";
 import type { PendingAction } from "../types";
 
+const TIME_LIMIT_OPTIONS = [15, 20, 30, 45, 60] as const;
+
 interface HostSetupScreenProps {
   hostName: string;
   onHostNameChange: (text: string) => void;
@@ -12,6 +14,7 @@ interface HostSetupScreenProps {
   selectedQuestionIndex: number;
   onSelectQuestion: (questionIndex: number) => void;
   onQuizTitleChange: (title: string) => void;
+  onTimeLimitChange: (timeLimit: number) => void;
   onPromptChange: (questionIndex: number, prompt: string) => void;
   onOptionChange: (questionIndex: number, optionIndex: number, text: string) => void;
   onCorrectOptionChange: (questionIndex: number, optionId: string) => void;
@@ -31,6 +34,7 @@ export function HostSetupScreen({
   selectedQuestionIndex,
   onSelectQuestion,
   onQuizTitleChange,
+  onTimeLimitChange,
   onPromptChange,
   onOptionChange,
   onCorrectOptionChange,
@@ -86,6 +90,28 @@ export function HostSetupScreen({
           style={styles.input}
           value={quiz.title}
         />
+        <Text style={styles.inputLabel}>Time per question</Text>
+        <View style={styles.timeLimitRow}>
+          {TIME_LIMIT_OPTIONS.map((seconds) => (
+            <Pressable
+              key={seconds}
+              onPress={() => onTimeLimitChange(seconds)}
+              style={[
+                styles.timeLimitOption,
+                quiz.timeLimit === seconds && styles.timeLimitOptionActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.timeLimitOptionText,
+                  quiz.timeLimit === seconds && styles.timeLimitOptionTextActive,
+                ]}
+              >
+                {seconds}s
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       <View style={[styles.card, styles.editorOverviewCard]}>

@@ -19,6 +19,7 @@ export interface QuizEditor {
   selectedQuestionIndex: number;
   setSelectedQuestionIndex: React.Dispatch<React.SetStateAction<number>>;
   updateQuizTitle: (title: string) => void;
+  updateTimeLimit: (timeLimit: number) => void;
   updateQuestionPrompt: (questionIndex: number, prompt: string) => void;
   updateQuestionOption: (questionIndex: number, optionIndex: number, text: string) => void;
   setCorrectOption: (questionIndex: number, optionId: string) => void;
@@ -33,6 +34,10 @@ export function useQuizEditor(): QuizEditor {
 
   const updateQuizTitle = (title: string) => {
     setQuiz((current) => ({ ...current, title }));
+  };
+
+  const updateTimeLimit = (timeLimit: number) => {
+    setQuiz((current) => ({ ...current, timeLimit }));
   };
 
   const updateQuestionPrompt = (questionIndex: number, prompt: string) => {
@@ -123,6 +128,7 @@ export function useQuizEditor(): QuizEditor {
     selectedQuestionIndex,
     setSelectedQuestionIndex,
     updateQuizTitle,
+    updateTimeLimit,
     updateQuestionPrompt,
     updateQuestionOption,
     setCorrectOption,

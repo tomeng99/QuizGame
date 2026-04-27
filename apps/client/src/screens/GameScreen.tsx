@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { Image, Pressable, Text, View } from "react-native";
-import type { PublicQuestion, RoomSnapshot } from "@quizgame/contracts";
+import type {
+  AnswerAcceptedPayload,
+  PublicQuestion,
+  QuestionRevealPayload,
+  RoomSnapshot,
+} from "@quizgame/contracts";
 import { styles } from "../styles";
+import { colors } from "../theme";
 import { StatusChip, LeaderboardRow } from "../components";
 import { OPTION_THEMES } from "../constants";
 import type { ConnectionState, PendingAction } from "../types";
@@ -16,6 +22,8 @@ interface GameScreenProps {
   selectedOptionId: string | null;
   hasAnsweredCurrentQuestion: boolean;
   answeredCount: number;
+  lastAnswerResult: AnswerAcceptedPayload | null;
+  questionReveal: QuestionRevealPayload | null;
   onSelectOption: (optionId: string) => void;
   onStartGame: () => void;
   onRevealLeaderboard: () => void;
@@ -34,6 +42,8 @@ export function GameScreen({
   selectedOptionId,
   hasAnsweredCurrentQuestion,
   answeredCount,
+  lastAnswerResult,
+  questionReveal,
   onSelectOption,
   onStartGame,
   onRevealLeaderboard,
@@ -43,6 +53,42 @@ export function GameScreen({
 }: GameScreenProps) {
   const winner = room.leaderboard[0] ?? null;
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
+
+  // ── Countdown timer ────────────────────────────────────────────────────────
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!currentQuestion || room.status !== "question") {
+      setSecondsLeft(null);
+      return;
+    }
+
+    setSecondsLeft(currentQuestion.timeLimit);
+
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentQuestion, room.status]);
+
+  const timerFraction =
+    currentQuestion && secondsLeft !== null
+      ? secondsLeft / currentQuestion.timeLimit
+      : 1;
+
+  const timerColor =
+    timerFraction > 0.5
+      ? colors.successBright
+      : timerFraction > 0.25
+        ? colors.optionOrange
+        : colors.errorBright;
 
   useEffect(() => {
     let cancelled = false;
@@ -260,11 +306,33 @@ export function GameScreen({
       {/* Active question */}
       {currentQuestion && (
         <View style={styles.questionCard}>
+          {/* Progress badge + timer */}
           <View style={styles.questionBadge}>
             <Text style={styles.questionBadgeText}>
               {currentQuestion.index + 1} / {currentQuestion.total}
             </Text>
           </View>
+
+          {/* Countdown bar (visible while question is live) */}
+          {room.status === "question" && secondsLeft !== null && (
+            <View style={styles.timerRow}>
+              <View style={[styles.timerBar, { flex: 1 }]}>
+                <View
+                  style={[
+                    styles.timerBarFill,
+                    {
+                      width: `${timerFraction * 100}%` as `${number}%`,
+                      backgroundColor: timerColor,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.timerLabel, { color: timerColor }]}>
+                {secondsLeft}s
+              </Text>
+            </View>
+          )}
+
           <Text style={styles.questionPrompt}>
             {currentQuestion.prompt}
           </Text>
@@ -275,6 +343,25 @@ export function GameScreen({
                 OPTION_THEMES[optionIndex % OPTION_THEMES.length];
               const selected = selectedOptionId === option.id;
               const answered = hasAnsweredCurrentQuestion;
+              const isRevealed = questionReveal !== null;
+              const isCorrectOption = isRevealed && option.id === questionReveal?.correctOptionId;
+              const isMyWrongAnswer = isRevealed && selected && !isCorrectOption;
+
+              const bgColor = isCorrectOption
+                ? `${colors.successBright}33`
+                : isMyWrongAnswer
+                  ? `${colors.errorBright}22`
+                  : selected
+                    ? theme.bg
+                    : `${theme.bg}25`;
+
+              const borderColor = isCorrectOption
+                ? colors.successBright
+                : isMyWrongAnswer
+                  ? colors.errorBright
+                  : selected
+                    ? theme.bg
+                    : `${theme.bg}50`;
 
               return (
                 <Pressable
@@ -283,28 +370,58 @@ export function GameScreen({
                   onPress={() => onSelectOption(option.id)}
                   style={[
                     styles.optionButton,
-                    {
-                      backgroundColor: selected
-                        ? theme.bg
-                        : `${theme.bg}25`,
-                      borderColor: selected ? theme.bg : `${theme.bg}50`,
-                    },
-                    answered && !selected && { opacity: 0.4 },
+                    { backgroundColor: bgColor, borderColor },
+                    answered && !selected && !isCorrectOption && { opacity: 0.4 },
                   ]}
                 >
                   <Text style={styles.optionIcon}>{theme.icon}</Text>
                   <Text
                     style={[
                       styles.optionText,
-                      selected && styles.optionTextSelected,
+                      (selected || isCorrectOption) && styles.optionTextSelected,
                     ]}
                   >
                     {option.text}
                   </Text>
+                  {isCorrectOption && (
+                    <Text style={{ fontSize: 18 }}>{"\u2705"}</Text>
+                  )}
+                  {isMyWrongAnswer && (
+                    <Text style={{ fontSize: 18 }}>{"\u274C"}</Text>
+                  )}
                 </Pressable>
               );
             })}
           </View>
+
+          {/* Answer result — shown after the player submits */}
+          {!isHost && hasAnsweredCurrentQuestion && lastAnswerResult && (
+            <View
+              style={[
+                styles.answerResultCard,
+                lastAnswerResult.isCorrect
+                  ? styles.answerResultCorrect
+                  : styles.answerResultWrong,
+              ]}
+            >
+              <Text style={styles.answerResultEmoji}>
+                {lastAnswerResult.isCorrect ? "\uD83C\uDF89" : "\uD83D\uDE14"}
+              </Text>
+              <Text style={styles.answerResultText}>
+                {lastAnswerResult.isCorrect ? "Correct!" : "Wrong answer"}
+              </Text>
+              {lastAnswerResult.isCorrect && (
+                <Text style={styles.answerResultPoints}>
+                  +{lastAnswerResult.pointsEarned} points
+                </Text>
+              )}
+              {lastAnswerResult.isCorrect && lastAnswerResult.streak >= 2 && (
+                <Text style={styles.answerResultStreak}>
+                  {"\uD83D\uDD25"} {lastAnswerResult.streak}x streak bonus!
+                </Text>
+              )}
+            </View>
+          )}
 
           {!isHost && (
             <Pressable

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import type {
+  AnswerAcceptedPayload,
   AnswerCountPayload,
   CheckRoomResult,
   ErrorMessagePayload,
   PublicQuestion,
+  QuestionRevealPayload,
   RoomJoinedPayload,
   RoomRejoinedPayload,
   RoomSnapshot,
@@ -58,6 +60,10 @@ export interface GameState {
   /* ── Per-question state (driven by narrow server events, not the full snapshot) ── */
   answeredCount: number;
   hasAnsweredCurrentQuestion: boolean;
+  /** Result of the player's most recent answer (isCorrect, points, streak). */
+  lastAnswerResult: AnswerAcceptedPayload | null;
+  /** Correct option ID revealed after the question closes. */
+  questionReveal: QuestionRevealPayload | null;
 
   /* ── Helpers ── */
   resetToStart: () => void;
@@ -88,6 +94,8 @@ export function useGameState(): GameState {
 
   const [answeredCount, setAnsweredCount] = useState(0);
   const [hasAnsweredCurrentQuestion, setHasAnsweredCurrentQuestion] = useState(false);
+  const [lastAnswerResult, setLastAnswerResult] = useState<AnswerAcceptedPayload | null>(null);
+  const [questionReveal, setQuestionReveal] = useState<QuestionRevealPayload | null>(null);
 
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
@@ -162,6 +170,8 @@ export function useGameState(): GameState {
     setIsHost(false);
     setAnsweredCount(0);
     setHasAnsweredCurrentQuestion(false);
+    setLastAnswerResult(null);
+    setQuestionReveal(null);
     setScreen("join-code");
   };
 
@@ -300,6 +310,8 @@ export function useGameState(): GameState {
       setSelectedOptionId(null);
       setAnsweredCount(0);
       setHasAnsweredCurrentQuestion(false);
+      setLastAnswerResult(null);
+      setQuestionReveal(null);
       setPendingAction(null);
       setFeedback({
         tone: "info",
@@ -308,8 +320,14 @@ export function useGameState(): GameState {
     });
 
     // Narrow event: the server confirms this player's answer was accepted.
-    socket.on("answer:accepted", () => {
+    socket.on("answer:accepted", (payload: AnswerAcceptedPayload) => {
       setHasAnsweredCurrentQuestion(true);
+      setLastAnswerResult(payload);
+    });
+
+    // Reveals the correct answer after the question closes (time up or host action).
+    socket.on("question:revealed", (payload: QuestionRevealPayload) => {
+      setQuestionReveal(payload);
     });
 
     // Narrow event: lightweight count update broadcast to all room members per answer.
@@ -396,6 +414,8 @@ export function useGameState(): GameState {
     setIsHost,
     answeredCount,
     hasAnsweredCurrentQuestion,
+    lastAnswerResult,
+    questionReveal,
     resetToStart,
   };
 }

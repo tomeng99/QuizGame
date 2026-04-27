@@ -11,6 +11,7 @@ interface LeaderboardRowProps {
 
 export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps) {
   const medal = MEDALS[index] ?? null;
+  const showDelta = (roomStatus === "leaderboard" || roomStatus === "finished") && entry.pointsEarnedThisRound > 0;
 
   return (
     <View
@@ -39,16 +40,28 @@ export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps
                 : "Thinking..."}
             </Text>
           ) : null}
+          {entry.streak >= 2 ? (
+            <View style={styles.streakBadge}>
+              <Text style={styles.streakBadgeText}>
+                {"\uD83D\uDD25"} {entry.streak}x streak
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
-      <Text
-        style={[
-          styles.leaderboardScore,
-          index === 0 && styles.leaderboardScoreFirst,
-        ]}
-      >
-        {entry.score}
-      </Text>
+      <View style={{ alignItems: "flex-end" }}>
+        <Text
+          style={[
+            styles.leaderboardScore,
+            index === 0 && styles.leaderboardScoreFirst,
+          ]}
+        >
+          {entry.score}
+        </Text>
+        {showDelta ? (
+          <Text style={styles.scoreDelta}>+{entry.pointsEarnedThisRound}</Text>
+        ) : null}
+      </View>
     </View>
   );
 }
