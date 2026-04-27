@@ -214,6 +214,7 @@ export default function App() {
             selectedQuestionIndex={editor.selectedQuestionIndex}
             onSelectQuestion={editor.setSelectedQuestionIndex}
             onQuizTitleChange={editor.updateQuizTitle}
+            onTimeLimitChange={editor.updateTimeLimit}
             onPromptChange={editor.updateQuestionPrompt}
             onOptionChange={editor.updateQuestionOption}
             onCorrectOptionChange={editor.setCorrectOption}
@@ -242,6 +243,8 @@ export default function App() {
             selectedOptionId={game.selectedOptionId}
             hasAnsweredCurrentQuestion={game.hasAnsweredCurrentQuestion}
             answeredCount={game.answeredCount}
+            lastAnswerResult={game.lastAnswerResult}
+            questionReveal={game.questionReveal}
             onSelectOption={game.setSelectedOptionId}
             onStartGame={startGame}
             onRevealLeaderboard={revealLeaderboard}

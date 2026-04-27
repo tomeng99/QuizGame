@@ -3,6 +3,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { Server, type Socket } from "socket.io";
 import {
+  AnswerAcceptedPayload,
   AnswerCountPayload,
   CheckRoomPayload,
   CheckRoomResult,
@@ -12,6 +13,7 @@ import {
   PlayerReconnectPayload,
   PlayerSummary,
   PublicQuestion,
+  QuestionRevealPayload,
   QuizDraft,
   QuizQuestion,
   RoomRejoinedPayload,
@@ -28,6 +30,10 @@ interface StoredPlayer {
   score: number;
   connected: boolean;
   lastAnsweredQuestionId: string | null;
+  /** Consecutive correct answers in a row. Resets to 0 on a wrong answer. */
+  streak: number;
+  /** Snapshot of score at the start of the current question round. */
+  scoreBeforeCurrentQuestion: number;
 }
 
 interface StoredRoom {
@@ -42,6 +48,8 @@ interface StoredRoom {
   players: Map<string, StoredPlayer>; // keyed by player.id (UUID)
   hostCloseTimer: ReturnType<typeof setTimeout> | null;
   cleanupTimer: ReturnType<typeof setTimeout> | null;
+  /** Auto-advance timer: fires emitLeaderboard after the question time limit expires. */
+  questionAutoTimer: ReturnType<typeof setTimeout> | null;
 }
 
 // ── App setup ──────────────────────────────────────────────────────────────────
@@ -172,9 +180,16 @@ const normalizeQuestion = (question: unknown, index: number): QuizQuestion | nul
 const normalizeQuiz = (raw: unknown): QuizDraft => {
   const q = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
   const title = isString(q.title) ? q.title.trim().slice(0, 200) : "";
+
+  // Accept any numeric timeLimit from the client, but clamp it to a safe [10, 120] second range
+  // and round to a whole number. Falls back to 30 s when the field is absent or non-numeric.
+  const rawTimeLimit = typeof q.timeLimit === "number" ? q.timeLimit : 30;
+  const timeLimit = Math.max(10, Math.min(120, Math.round(rawTimeLimit)));
+
   const rawQuestions = Array.isArray(q.questions) ? q.questions : [];
   return {
     title: title || "Untitled Quiz",
+    timeLimit,
     questions: rawQuestions
       .slice(0, MAX_QUESTIONS)
       .map((question, index) => normalizeQuestion(question, index))
@@ -194,6 +209,10 @@ const toLeaderboard = (room: StoredRoom): LeaderboardEntry[] =>
       answeredCurrentQuestion:
         room.currentQuestionIndex !== null &&
         player.lastAnsweredQuestionId === room.quiz.questions[room.currentQuestionIndex]?.id,
+      streak: player.streak,
+      // Compute the net points earned this round by diffing against the pre-question snapshot.
+      // This gives the client a "score delta" without needing a separate event.
+      pointsEarnedThisRound: player.score - player.scoreBeforeCurrentQuestion,
     }));
 
 const toPlayers = (room: StoredRoom): PlayerSummary[] =>
@@ -219,12 +238,14 @@ const toPublicQuestion = (
   question: QuizQuestion,
   index: number,
   total: number,
+  timeLimit: number,
 ): PublicQuestion => ({
   id: question.id,
   prompt: question.prompt,
   options: question.options,
   index,
   total,
+  timeLimit,
 });
 
 // ── Emit helpers ──────────────────────────────────────────────────────────────
@@ -238,7 +259,24 @@ const emitRoomClosed = (room: StoredRoom, message: string) => {
 };
 
 const emitLeaderboard = (room: StoredRoom) => {
+  // Cancel any pending auto-advance timer so the leaderboard is only shown once.
+  if (room.questionAutoTimer !== null) {
+    clearTimeout(room.questionAutoTimer);
+    room.questionAutoTimer = null;
+  }
+
   room.status = "leaderboard";
+
+  // Reveal the correct answer so players see what they got right or wrong.
+  const question =
+    room.currentQuestionIndex !== null
+      ? room.quiz.questions[room.currentQuestionIndex]
+      : null;
+  if (question) {
+    const revealPayload: QuestionRevealPayload = { correctOptionId: question.correctOptionId };
+    io.to(room.code).emit("question:revealed", revealPayload);
+  }
+
   io.to(room.code).emit("leaderboard:update", toSnapshot(room));
 };
 
@@ -271,26 +309,51 @@ const emitError = (socket: Socket, message: string) => {
 // ── Game lifecycle ────────────────────────────────────────────────────────────
 
 const startQuestion = (room: StoredRoom, questionIndex: number) => {
+  // Guard: cancel any previous auto-advance timer before starting a new question.
+  // This prevents an edge case where a rapid "next question" from the host could
+  // fire the leaderboard event on the newly-started question.
+  if (room.questionAutoTimer !== null) {
+    clearTimeout(room.questionAutoTimer);
+    room.questionAutoTimer = null;
+  }
+
   room.currentQuestionIndex = questionIndex;
   room.questionStartedAt = Date.now();
   room.status = "question";
 
   for (const player of room.players.values()) {
+    // Snapshot each player's score at question start so we can compute pointsEarnedThisRound
+    // when building the leaderboard entry after the question closes.
+    player.scoreBeforeCurrentQuestion = player.score;
     player.lastAnsweredQuestionId = null;
   }
 
   const question = room.quiz.questions[questionIndex];
+  const { timeLimit } = room.quiz;
   app.log.info({ roomCode: room.code, questionIndex }, "question started");
 
   io.to(room.code).emit(
     "question:started",
-    toPublicQuestion(question, questionIndex, room.quiz.questions.length),
+    toPublicQuestion(question, questionIndex, room.quiz.questions.length, timeLimit),
   );
   emitRoomUpdate(room);
+
+  // Schedule the server-side auto-advance. When all players answer early the manual
+  // path (emitLeaderboard) cancels this timer, so it only fires if time genuinely runs out.
+  room.questionAutoTimer = setTimeout(() => {
+    if (room.status === "question") {
+      app.log.info({ roomCode: room.code, questionIndex }, "question timed out — auto-advancing");
+      emitLeaderboard(room);
+    }
+  }, timeLimit * 1000);
 };
 
 /** Remove a room and all its associated token entries from every store. */
 const deleteRoom = (room: StoredRoom) => {
+  if (room.questionAutoTimer !== null) {
+    clearTimeout(room.questionAutoTimer);
+    room.questionAutoTimer = null;
+  }
   tokenStore.delete(room.hostToken);
   for (const playerId of room.players.keys()) {
     tokenStore.delete(playerId);
@@ -300,6 +363,10 @@ const deleteRoom = (room: StoredRoom) => {
 };
 
 const finishGame = (room: StoredRoom) => {
+  if (room.questionAutoTimer !== null) {
+    clearTimeout(room.questionAutoTimer);
+    room.questionAutoTimer = null;
+  }
   room.status = "finished";
   room.currentQuestionIndex = null;
   room.questionStartedAt = null;
@@ -333,6 +400,7 @@ const restoreSocketToRoom = (
           room.quiz.questions[room.currentQuestionIndex],
           room.currentQuestionIndex,
           room.quiz.questions.length,
+          room.quiz.timeLimit,
         )
       : null;
 
@@ -390,6 +458,7 @@ const registerRealtimeHandlers = () => {
         players: new Map(),
         hostCloseTimer: null,
         cleanupTimer: null,
+        questionAutoTimer: null,
       };
 
       rooms.set(code, room);
@@ -522,6 +591,8 @@ const registerRealtimeHandlers = () => {
         score: 0,
         connected: true,
         lastAnsweredQuestionId: null,
+        streak: 0,
+        scoreBeforeCurrentQuestion: 0,
       };
 
       room.players.set(playerId, player);
@@ -769,14 +840,45 @@ const registerRealtimeHandlers = () => {
 
       player.lastAnsweredQuestionId = question.id;
 
+      // Default to wrong — overwritten below if the answer is correct.
+      let isCorrect = false;
+      let pointsEarned = 0;
+
       if (ans.optionId === question.correctOptionId) {
+        isCorrect = true;
+        player.streak += 1;
+
+        // Time-based scoring: a player who answers at the very start earns 1000 pts,
+        // and a player who answers right at the limit earns 300 pts (the floor).
+        // timeFraction is clamped to [0, 1] to guard against clock skew / network lag.
         const elapsedMs = Math.max(0, Date.now() - (room.questionStartedAt ?? Date.now()));
-        const awarded = Math.max(300, 1000 - Math.floor(elapsedMs / 20));
-        player.score += awarded;
+        const timeFraction = Math.min(elapsedMs / (room.quiz.timeLimit * 1000), 1);
+        const basePoints = Math.max(300, Math.round(1000 - 700 * timeFraction)); // 1000 → 300 over time
+
+        // Streak bonus: each consecutive correct answer rewards the player more.
+        // Thresholds are intentionally generous to keep the mechanic exciting without
+        // being unbalancing (max bonus is 300 pts on top of a 1000 pt question).
+        const streakBonus =
+          player.streak >= 5 ? 300
+          : player.streak >= 3 ? 150
+          : player.streak >= 2 ? 75
+          : 0;
+
+        pointsEarned = basePoints + streakBonus;
+        player.score += pointsEarned;
+      } else {
+        // Any wrong answer breaks the streak back to zero immediately.
+        player.streak = 0;
       }
 
-      // Acknowledge the answer to the answering player only — no full broadcast per answer.
-      socket.emit("answer:accepted");
+      // Acknowledge the answer to the answering player with result details.
+      // We emit only to the sender — other players learn who answered via emitAnswerCount.
+      const acceptedPayload: AnswerAcceptedPayload = {
+        isCorrect,
+        pointsEarned,
+        streak: player.streak,
+      };
+      socket.emit("answer:accepted", acceptedPayload);
 
       // Broadcast a lightweight count update so all clients can show progress.
       emitAnswerCount(room);
