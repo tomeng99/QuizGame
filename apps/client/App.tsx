@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo } from "react";
-import { SafeAreaView, ScrollView, Text, View } from "react-native";
+import { Platform, SafeAreaView, ScrollView, Text, View } from "react-native";
 
 import { getJoinUrl } from "./src/config";
 import { useGameState, useQuizEditor } from "./src/hooks";
@@ -102,6 +102,13 @@ export default function App() {
       roomCode: game.room.roomCode,
       optionId: game.selectedOptionId,
     });
+  };
+
+  const openPlayerTab = () => {
+    if (!joinUrl || Platform.OS !== "web" || typeof window === "undefined") {
+      return;
+    }
+    window.open(joinUrl, "_blank");
   };
 
   useEffect(() => {
@@ -228,6 +235,7 @@ export default function App() {
               game.setScreen("join-code");
               game.setFeedback({ tone: "info", message: "Ready to play!" });
             }}
+            onLoadSampleQuiz={editor.loadSampleQuiz}
           />
         )}
 
@@ -254,6 +262,7 @@ export default function App() {
               game.resetToStart();
               game.setFeedback({ tone: "info", message: "Ready to play!" });
             }}
+            onOpenPlayerTab={joinUrl ? openPlayerTab : null}
           />
         )}
       </ScrollView>

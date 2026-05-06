@@ -27,6 +27,7 @@ interface HostSetupScreenProps {
   pendingAction: PendingAction;
   onCreateRoom: () => void;
   onBack: () => void;
+  onLoadSampleQuiz: () => void;
 }
 
 export function HostSetupScreen({
@@ -47,6 +48,7 @@ export function HostSetupScreen({
   pendingAction,
   onCreateRoom,
   onBack,
+  onLoadSampleQuiz,
 }: HostSetupScreenProps) {
   const activeQuestionIndex = Math.min(
     selectedQuestionIndex,
@@ -67,6 +69,12 @@ export function HostSetupScreen({
           Start with a blank canvas and build one question at a time.
         </Text>
       </View>
+
+      {__DEV__ && (
+        <Pressable onPress={onLoadSampleQuiz} style={styles.devButton}>
+          <Text style={styles.devButtonText}>⚡ Load sample quiz</Text>
+        </Pressable>
+      )}
 
       <View style={[styles.card, styles.editorBasicsCard]}>
         <View style={styles.editorSectionHeader}>

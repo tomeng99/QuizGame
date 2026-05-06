@@ -218,6 +218,22 @@ export const styles = StyleSheet.create({
     fontWeight: fontWeights.semibold,
   },
 
+  /* ── Dev helper button ── */
+  devButton: {
+    alignItems: "center",
+    borderColor: colors.optionOrange,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sectionPadding,
+    paddingVertical: spacing.xl,
+    width: "100%",
+  },
+  devButtonText: {
+    color: colors.optionOrange,
+    fontSize: fontSizes.body,
+    fontWeight: fontWeights.semibold,
+  },
+
   /* ── Card ── */
   card: {
     backgroundColor: colors.bgCard,
