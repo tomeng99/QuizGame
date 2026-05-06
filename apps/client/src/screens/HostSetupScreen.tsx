@@ -70,7 +70,7 @@ export function HostSetupScreen({
         </Text>
       </View>
 
-      {__DEV__ && (
+      {process.env.EXPO_PUBLIC_DEV_TOOLS === "true" && (
         <Pressable onPress={onLoadSampleQuiz} style={styles.devButton}>
           <Text style={styles.devButtonText}>⚡ Load sample quiz</Text>
         </Pressable>
