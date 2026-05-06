@@ -30,6 +30,7 @@ interface GameScreenProps {
   onNextQuestion: () => void;
   onSubmitAnswer: () => void;
   onBackToStart: () => void;
+  onOpenPlayerTab: (() => void) | null;
 }
 
 export function GameScreen({
@@ -50,6 +51,7 @@ export function GameScreen({
   onNextQuestion,
   onSubmitAnswer,
   onBackToStart,
+  onOpenPlayerTab,
 }: GameScreenProps) {
   const winner = room.leaderboard[0] ?? null;
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
@@ -199,6 +201,11 @@ export function GameScreen({
                   ? "Waiting for players to join..."
                   : `${room.players.length} player${room.players.length !== 1 ? "s" : ""} joined. Start when ready!`}
               </Text>
+              {onOpenPlayerTab && (
+                <Pressable onPress={onOpenPlayerTab} style={styles.devButton}>
+                  <Text style={styles.devButtonText}>⚡ Open player tab</Text>
+                </Pressable>
+              )}
               <Pressable
                 disabled={
                   pendingAction !== null || room.players.length === 0

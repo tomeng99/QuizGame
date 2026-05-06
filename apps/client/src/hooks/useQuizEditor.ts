@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createEmptyQuestion, createStarterQuiz, type QuizDraft } from "@quizgame/contracts";
+import { SAMPLE_HOST_NAME, SAMPLE_QUIZ } from "../devSampleQuiz";
 
 const QUESTION_ID_PATTERN = /^question-(\d+)$/;
 
@@ -25,6 +26,7 @@ export interface QuizEditor {
   setCorrectOption: (questionIndex: number, optionId: string) => void;
   addQuestion: () => void;
   removeQuestion: (questionId: string) => void;
+  loadSampleQuiz: () => void;
 }
 
 export function useQuizEditor(): QuizEditor {
@@ -120,6 +122,12 @@ export function useQuizEditor(): QuizEditor {
     }
   };
 
+  const loadSampleQuiz = () => {
+    setHostName(SAMPLE_HOST_NAME);
+    setQuiz(SAMPLE_QUIZ);
+    setSelectedQuestionIndex(0);
+  };
+
   return {
     quiz,
     setQuiz,
@@ -134,5 +142,6 @@ export function useQuizEditor(): QuizEditor {
     setCorrectOption,
     addQuestion,
     removeQuestion,
+    loadSampleQuiz,
   };
 }
