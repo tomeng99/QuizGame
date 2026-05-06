@@ -6,6 +6,7 @@ import type {
   QuestionRevealPayload,
   RoomSnapshot,
 } from "@quizgame/contracts";
+import { IS_DEV_ENVIRONMENT } from "../config";
 import { styles } from "../styles";
 import { colors } from "../theme";
 import { StatusChip, LeaderboardRow } from "../components";
@@ -201,7 +202,7 @@ export function GameScreen({
                   ? "Waiting for players to join..."
                   : `${room.players.length} player${room.players.length !== 1 ? "s" : ""} joined. Start when ready!`}
               </Text>
-              {onOpenPlayerTab && process.env.EXPO_PUBLIC_DEV_TOOLS === "true" && (
+              {onOpenPlayerTab && IS_DEV_ENVIRONMENT && (
                 <Pressable onPress={onOpenPlayerTab} style={styles.devButton}>
                   <Text style={styles.devButtonText}>⚡ Open player tab</Text>
                 </Pressable>
