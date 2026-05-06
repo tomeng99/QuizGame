@@ -201,7 +201,7 @@ export function GameScreen({
                   ? "Waiting for players to join..."
                   : `${room.players.length} player${room.players.length !== 1 ? "s" : ""} joined. Start when ready!`}
               </Text>
-              {onOpenPlayerTab && (
+              {onOpenPlayerTab && __DEV__ && (
                 <Pressable onPress={onOpenPlayerTab} style={styles.devButton}>
                   <Text style={styles.devButtonText}>⚡ Open player tab</Text>
                 </Pressable>

@@ -70,9 +70,11 @@ export function HostSetupScreen({
         </Text>
       </View>
 
-      <Pressable onPress={onLoadSampleQuiz} style={styles.devButton}>
-        <Text style={styles.devButtonText}>⚡ Load sample quiz</Text>
-      </Pressable>
+      {__DEV__ && (
+        <Pressable onPress={onLoadSampleQuiz} style={styles.devButton}>
+          <Text style={styles.devButtonText}>⚡ Load sample quiz</Text>
+        </Pressable>
+      )}
 
       <View style={[styles.card, styles.editorBasicsCard]}>
         <View style={styles.editorSectionHeader}>
