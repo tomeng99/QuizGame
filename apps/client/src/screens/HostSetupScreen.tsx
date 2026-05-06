@@ -1,13 +1,12 @@
 import { Pressable, Text, TextInput, View } from "react-native";
-import type { QuizDraft } from "@quizgame/contracts";
+import type { QuestionType, QuizDraft } from "@quizgame/contracts";
 import { IS_DEV_ENVIRONMENT } from "../config";
+import { isQuestionReady } from "../helpers";
 import { styles } from "../styles";
 import { colors } from "../theme";
 import { QuestionEditorCard } from "../components";
 import type { PendingAction } from "../types";
 
-// Available time limits in seconds. A `const` tuple lets TypeScript infer the
-// literal types, which makes it safe to use the values directly in onTimeLimitChange.
 const TIME_LIMIT_OPTIONS = [15, 20, 30, 45, 60] as const;
 
 interface HostSetupScreenProps {
@@ -19,7 +18,17 @@ interface HostSetupScreenProps {
   onQuizTitleChange: (title: string) => void;
   onTimeLimitChange: (timeLimit: number) => void;
   onPromptChange: (questionIndex: number, prompt: string) => void;
+  onTypeChange: (questionIndex: number, type: QuestionType) => void;
   onOptionChange: (questionIndex: number, optionIndex: number, text: string) => void;
+  onPollOptionChange: (questionIndex: number, optionIndex: number, text: string) => void;
+  onNumberFieldChange: (
+    questionIndex: number,
+    field: "correctNumber" | "minValue" | "maxValue",
+    value: number,
+  ) => void;
+  onRankingItemChange: (questionIndex: number, itemIndex: number, text: string) => void;
+  onAddRankingItem: (questionIndex: number) => void;
+  onRemoveRankingItem: (questionIndex: number, itemIndex: number) => void;
   onCorrectOptionChange: (questionIndex: number, optionId: string) => void;
   onRemoveQuestion: (questionId: string) => void;
   onAddQuestion: () => void;
@@ -40,7 +49,13 @@ export function HostSetupScreen({
   onQuizTitleChange,
   onTimeLimitChange,
   onPromptChange,
+  onTypeChange,
   onOptionChange,
+  onPollOptionChange,
+  onNumberFieldChange,
+  onRankingItemChange,
+  onAddRankingItem,
+  onRemoveRankingItem,
   onCorrectOptionChange,
   onRemoveQuestion,
   onAddQuestion,
@@ -56,11 +71,7 @@ export function HostSetupScreen({
     quiz.questions.length - 1,
   );
   const activeQuestion = quiz.questions[activeQuestionIndex];
-  const readyQuestionCount = quiz.questions.filter((question) => {
-    const filledOptions = question.options.filter((option) => option.text.trim());
-
-    return question.prompt.trim().length > 0 && filledOptions.length >= 2;
-  }).length;
+  const readyQuestionCount = quiz.questions.filter(isQuestionReady).length;
 
   return (
     <>
@@ -102,9 +113,6 @@ export function HostSetupScreen({
           value={quiz.title}
         />
         <Text style={styles.inputLabel}>Time per question</Text>
-        {/* Pill selector for the per-question countdown. The selected value is
-            applied quiz-wide — every question uses the same limit.
-            The active pill is visually distinguished with a purple accent border. */}
         <View style={styles.timeLimitRow}>
           {TIME_LIMIT_OPTIONS.map((seconds) => (
             <Pressable
@@ -133,8 +141,7 @@ export function HostSetupScreen({
           <View style={styles.editorSectionHeader}>
             <Text style={styles.sectionTitle}>Questions</Text>
             <Text style={styles.editorSectionText}>
-              Jump between questions, keep only one in focus, and mark the
-              correct answer with a single tap.
+              Mix multiple-choice, poll, number, and ranking rounds in one quiz.
             </Text>
           </View>
           <Pressable onPress={onAddQuestion} style={styles.addQuestionInlineButton}>
@@ -162,11 +169,7 @@ export function HostSetupScreen({
         <View style={styles.editorQuestionTabs}>
           {quiz.questions.map((question, questionIndex) => {
             const isSelected = questionIndex === activeQuestionIndex;
-            const filledOptions = question.options.filter((option) =>
-              option.text.trim(),
-            );
-            const isReady =
-              question.prompt.trim().length > 0 && filledOptions.length >= 2;
+            const isReady = isQuestionReady(question);
 
             return (
               <Pressable
@@ -202,11 +205,31 @@ export function HostSetupScreen({
       <QuestionEditorCard
         key={activeQuestion.id}
         canRemove={quiz.questions.length > 1}
+        onTypeChange={(type) => onTypeChange(activeQuestionIndex, type)}
         onCorrectOptionChange={(optionId) =>
           onCorrectOptionChange(activeQuestionIndex, optionId)
         }
         onOptionChange={(optionIndex, text) =>
           onOptionChange(activeQuestionIndex, optionIndex, text)
+        }
+        onPollOptionChange={(optionIndex, text) =>
+          onPollOptionChange(activeQuestionIndex, optionIndex, text)
+        }
+        onCorrectNumberChange={(value) =>
+          onNumberFieldChange(activeQuestionIndex, "correctNumber", value)
+        }
+        onMinValueChange={(value) =>
+          onNumberFieldChange(activeQuestionIndex, "minValue", value)
+        }
+        onMaxValueChange={(value) =>
+          onNumberFieldChange(activeQuestionIndex, "maxValue", value)
+        }
+        onRankingItemChange={(itemIndex, text) =>
+          onRankingItemChange(activeQuestionIndex, itemIndex, text)
+        }
+        onAddRankingItem={() => onAddRankingItem(activeQuestionIndex)}
+        onRemoveRankingItem={(itemIndex) =>
+          onRemoveRankingItem(activeQuestionIndex, itemIndex)
         }
         onPromptChange={(prompt) => onPromptChange(activeQuestionIndex, prompt)}
         onRemove={() => onRemoveQuestion(activeQuestion.id)}

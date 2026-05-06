@@ -53,6 +53,11 @@ export interface GameState {
   setCurrentQuestion: React.Dispatch<React.SetStateAction<PublicQuestion | null>>;
   selectedOptionId: string | null;
   setSelectedOptionId: React.Dispatch<React.SetStateAction<string | null>>;
+  /** The player's current slider value or ranking order (for UI before submit). */
+  numberGuess: number | null;
+  setNumberGuess: React.Dispatch<React.SetStateAction<number | null>>;
+  rankingOrder: string[];
+  setRankingOrder: React.Dispatch<React.SetStateAction<string[]>>;
   sessionPlayerId: string | null;
   isHost: boolean;
   setIsHost: React.Dispatch<React.SetStateAction<boolean>>;
@@ -62,7 +67,7 @@ export interface GameState {
   hasAnsweredCurrentQuestion: boolean;
   /** Result of the player's most recent answer (isCorrect, points, streak). */
   lastAnswerResult: AnswerAcceptedPayload | null;
-  /** Correct option ID revealed after the question closes. */
+  /** Revealed round result after the question closes. */
   questionReveal: QuestionRevealPayload | null;
 
   /* ── Helpers ── */
@@ -89,6 +94,8 @@ export function useGameState(): GameState {
   const [room, setRoom] = useState<RoomSnapshot | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<PublicQuestion | null>(null);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const [numberGuess, setNumberGuess] = useState<number | null>(null);
+  const [rankingOrder, setRankingOrder] = useState<string[]>([]);
   const [sessionPlayerId, setSessionPlayerId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
 
@@ -170,6 +177,8 @@ export function useGameState(): GameState {
     setRoom(null);
     setCurrentQuestion(null);
     setSelectedOptionId(null);
+    setNumberGuess(null);
+    setRankingOrder([]);
     setSessionPlayerId(null);
     setCheckedRoom(null);
     setSharedRoomCode(null);
@@ -253,6 +262,8 @@ export function useGameState(): GameState {
       setRoom(payload.room);
       setCurrentQuestion(null);
       setSelectedOptionId(null);
+      setNumberGuess(null);
+      setRankingOrder([]);
       setAnsweredCount(0);
       setHasAnsweredCurrentQuestion(false);
       setScreen("game");
@@ -284,9 +295,24 @@ export function useGameState(): GameState {
 
       setRoom(payload.room);
       setIsHost(payload.isHost);
+      setSelectedOptionId(null);
+      setLastAnswerResult(null);
+      setQuestionReveal(null);
 
       if (payload.currentQuestion) {
         setCurrentQuestion(payload.currentQuestion);
+        if (payload.currentQuestion.type === "number") {
+          setNumberGuess(
+            Math.round((payload.currentQuestion.minValue + payload.currentQuestion.maxValue) / 2),
+          );
+        } else {
+          setNumberGuess(null);
+        }
+        if (payload.currentQuestion.type === "ranking") {
+          setRankingOrder(payload.currentQuestion.items.map((item) => item.id));
+        } else {
+          setRankingOrder([]);
+        }
         // Derive answered state from the fresh snapshot the server computed on reconnect.
         const selfEntry = restoredToken
           ? payload.room.leaderboard.find((e) => e.playerId === restoredToken)
@@ -296,6 +322,9 @@ export function useGameState(): GameState {
           payload.room.leaderboard.filter((e) => e.answeredCurrentQuestion).length,
         );
       } else {
+        setCurrentQuestion(null);
+        setNumberGuess(null);
+        setRankingOrder([]);
         setAnsweredCount(0);
         setHasAnsweredCurrentQuestion(false);
       }
@@ -314,6 +343,16 @@ export function useGameState(): GameState {
     socket.on("question:started", (question: PublicQuestion) => {
       setCurrentQuestion(question);
       setSelectedOptionId(null);
+      if (question.type === "number") {
+        setNumberGuess(Math.round((question.minValue + question.maxValue) / 2));
+      } else {
+        setNumberGuess(null);
+      }
+      if (question.type === "ranking") {
+        setRankingOrder(question.items.map((item) => item.id));
+      } else {
+        setRankingOrder([]);
+      }
       setAnsweredCount(0);
       setHasAnsweredCurrentQuestion(false);
       setLastAnswerResult(null);
@@ -347,8 +386,6 @@ export function useGameState(): GameState {
 
     socket.on("leaderboard:update", (snapshot: RoomSnapshot) => {
       setRoom(snapshot);
-      setCurrentQuestion(null);
-      setSelectedOptionId(null);
       setPendingAction(null);
       setFeedback({
         tone: "success",
@@ -363,6 +400,8 @@ export function useGameState(): GameState {
       setRoom(snapshot);
       setCurrentQuestion(null);
       setSelectedOptionId(null);
+      setNumberGuess(null);
+      setRankingOrder([]);
       setPendingAction(null);
       const winner = snapshot.leaderboard[0];
       setFeedback({
@@ -419,6 +458,10 @@ export function useGameState(): GameState {
     setCurrentQuestion,
     selectedOptionId,
     setSelectedOptionId,
+    numberGuess,
+    setNumberGuess,
+    rankingOrder,
+    setRankingOrder,
     sessionPlayerId,
     isHost,
     setIsHost,

@@ -366,6 +366,31 @@ export const styles = StyleSheet.create({
     gap: spacing.xxl,
     padding: spacing.page,
   },
+  questionTypeSelector: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+  },
+  questionTypePill: {
+    backgroundColor: colors.bgInput,
+    borderColor: colors.borderInput,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.xl,
+  },
+  questionTypePillActive: {
+    backgroundColor: colors.bgPurpleDark,
+    borderColor: colors.accent,
+  },
+  questionTypePillText: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.body,
+    fontWeight: fontWeights.bold,
+  },
+  questionTypePillTextActive: {
+    color: colors.textPurpleLight,
+  },
   editorQuestionHeader: {
     flexDirection: "row",
     gap: spacing.md,
@@ -470,6 +495,41 @@ export const styles = StyleSheet.create({
   },
   correctToggleTextActive: {
     color: colors.textWhite,
+  },
+  editorNumberGrid: {
+    gap: spacing.lg,
+  },
+  editorNumberField: {
+    gap: spacing.xs,
+  },
+  rankingEditorItemCard: {
+    backgroundColor: colors.bgInput,
+    borderColor: colors.borderInput,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    gap: spacing.md,
+    padding: spacing.xxl,
+  },
+  rankingEditorItemHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  rankingEditorItemNumber: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.body,
+    fontWeight: fontWeights.bold,
+  },
+  rankingEditorRemoveButton: {
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.xl,
+  },
+  rankingEditorRemoveButtonText: {
+    color: colors.errorBright,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.bold,
   },
   addQuestionButton: {
     alignItems: "center",
@@ -656,11 +716,39 @@ export const styles = StyleSheet.create({
     width: 28,
     textAlign: "center",
   },
+  optionContent: {
+    flex: 1,
+    gap: spacing.md,
+  },
   optionText: {
     color: colors.textPrimary,
     flex: 1,
     fontSize: fontSizes.lg,
     fontWeight: fontWeights.semibold,
+  },
+  pollResultRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  pollResultTrack: {
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.full,
+    flex: 1,
+    height: 8,
+    overflow: "hidden",
+  },
+  pollResultFill: {
+    backgroundColor: colors.successBright,
+    borderRadius: radii.full,
+    height: "100%",
+  },
+  pollResultCount: {
+    color: colors.textLight,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.bold,
+    minWidth: 20,
+    textAlign: "right",
   },
   optionTextSelected: {
     fontWeight: fontWeights.extrabold,
@@ -706,6 +794,11 @@ export const styles = StyleSheet.create({
   answerResultWrong: {
     backgroundColor: `${colors.errorBright}18`,
     borderColor: colors.errorBright,
+    borderWidth: 1,
+  },
+  answerResultPending: {
+    backgroundColor: `${colors.accent}18`,
+    borderColor: colors.accent,
     borderWidth: 1,
   },
   answerResultEmoji: {
@@ -755,6 +848,158 @@ export const styles = StyleSheet.create({
   },
   timeLimitOptionTextActive: {
     color: colors.textPurpleLight,
+  },
+
+  revealCard: {
+    backgroundColor: colors.bgSurface,
+    borderColor: colors.borderInput,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    gap: spacing.md,
+    padding: spacing.xxl,
+  },
+  revealLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.body,
+    textAlign: "center",
+  },
+  revealValue: {
+    color: colors.textPrimary,
+    fontSize: fontSizes.display,
+    fontWeight: fontWeights.extrabold,
+    textAlign: "center",
+  },
+  revealSubtext: {
+    color: colors.textPurpleLight,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+    textAlign: "center",
+  },
+  revealListItem: {
+    color: colors.textPrimary,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+  },
+  sliderQuestionCard: {
+    gap: spacing.lg,
+  },
+  sliderQuestionValue: {
+    color: colors.textPrimary,
+    fontSize: fontSizes.display,
+    fontWeight: fontWeights.extrabold,
+    textAlign: "center",
+  },
+  sliderQuestionLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  sliderQuestionLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.body,
+    fontWeight: fontWeights.semibold,
+  },
+  sliderTrack: {
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.full,
+    height: 28,
+    justifyContent: "center",
+    overflow: "visible",
+    position: "relative",
+  },
+  sliderTrackFill: {
+    backgroundColor: colors.accent,
+    borderRadius: radii.full,
+    height: "100%",
+  },
+  sliderThumb: {
+    backgroundColor: colors.textWhite,
+    borderColor: colors.accent,
+    borderRadius: radii.full,
+    borderWidth: 3,
+    height: 28,
+    marginLeft: -14,
+    position: "absolute",
+    top: 0,
+    width: 28,
+  },
+  sliderQuestionHint: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.body,
+    textAlign: "center",
+  },
+  rankingQuestionCard: {
+    gap: spacing.lg,
+  },
+  rankingQuestionTitle: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.body,
+    textAlign: "center",
+  },
+  rankingQuestionList: {
+    gap: spacing.md,
+  },
+  rankingChoiceCard: {
+    alignItems: "center",
+    backgroundColor: colors.bgInput,
+    borderColor: colors.borderInput,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.xl,
+    padding: spacing.xxl,
+  },
+  rankingChoiceCardSelected: {
+    backgroundColor: colors.bgPurpleDark,
+    borderColor: colors.accent,
+  },
+  rankingChoiceCardDisabled: {
+    opacity: 0.8,
+  },
+  rankingChoiceBadge: {
+    alignItems: "center",
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.full,
+    height: 34,
+    justifyContent: "center",
+    width: 34,
+  },
+  rankingChoiceBadgeText: {
+    color: colors.textPrimary,
+    fontSize: fontSizes.body,
+    fontWeight: fontWeights.extrabold,
+  },
+  rankingChoiceText: {
+    color: colors.textPrimary,
+    flex: 1,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+  },
+  rankingSelectedCard: {
+    backgroundColor: colors.bgSurface,
+    borderColor: colors.borderInput,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    gap: spacing.md,
+    padding: spacing.xxl,
+  },
+  rankingSelectedHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  rankingSelectedTitle: {
+    color: colors.textPrimary,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.bold,
+  },
+  rankingSelectedHint: {
+    color: colors.textMuted,
+    fontSize: fontSizes.body,
+  },
+  rankingSelectedItem: {
+    color: colors.textPrimary,
+    fontSize: fontSizes.body,
+    fontWeight: fontWeights.semibold,
   },
 
   /* ── Winner ── */

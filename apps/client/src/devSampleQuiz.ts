@@ -8,6 +8,7 @@ export const SAMPLE_QUIZ: QuizDraft = {
   questions: [
     {
       id: "sample-q1",
+      type: "multiple-choice",
       prompt: "What is 2 + 2?",
       options: [
         { id: "sample-q1-a", text: "3" },
@@ -19,25 +20,34 @@ export const SAMPLE_QUIZ: QuizDraft = {
     },
     {
       id: "sample-q2",
-      prompt: "Which planet is closest to the Sun?",
+      type: "poll",
+      prompt: "What's the best season?",
       options: [
-        { id: "sample-q2-a", text: "Venus" },
-        { id: "sample-q2-b", text: "Earth" },
-        { id: "sample-q2-c", text: "Mercury" },
-        { id: "sample-q2-d", text: "Mars" },
+        { id: "sample-q2-a", text: "Spring" },
+        { id: "sample-q2-b", text: "Summer" },
+        { id: "sample-q2-c", text: "Autumn" },
+        { id: "sample-q2-d", text: "Winter" },
       ],
-      correctOptionId: "sample-q2-c",
     },
     {
       id: "sample-q3",
-      prompt: "What language runs in a web browser?",
-      options: [
-        { id: "sample-q3-a", text: "Python" },
-        { id: "sample-q3-b", text: "Java" },
-        { id: "sample-q3-c", text: "JavaScript" },
-        { id: "sample-q3-d", text: "C++" },
+      type: "number",
+      prompt: "How many countries are in the United Nations?",
+      correctNumber: 193,
+      minValue: 100,
+      maxValue: 250,
+    },
+    {
+      id: "sample-q4",
+      type: "ranking",
+      prompt: "Order these planets from closest to furthest from the Sun",
+      items: [
+        { id: "sample-q4-r1", text: "Mercury" },
+        { id: "sample-q4-r2", text: "Venus" },
+        { id: "sample-q4-r3", text: "Earth" },
+        { id: "sample-q4-r4", text: "Mars" },
       ],
-      correctOptionId: "sample-q3-c",
+      correctOrder: ["sample-q4-r1", "sample-q4-r2", "sample-q4-r3", "sample-q4-r4"],
     },
   ],
 };

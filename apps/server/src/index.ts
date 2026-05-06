@@ -34,6 +34,8 @@ interface StoredPlayer {
   streak: number;
   /** Snapshot of score at the start of the current question round. */
   scoreBeforeCurrentQuestion: number;
+  /** The player's answer for the current question (for pending-scoring types). */
+  currentAnswer: SubmitAnswerPayload | null;
 }
 
 interface StoredRoom {
@@ -45,6 +47,7 @@ interface StoredRoom {
   status: RoomSnapshot["status"];
   currentQuestionIndex: number | null;
   questionStartedAt: number | null;
+  activePublicQuestion: PublicQuestion | null;
   players: Map<string, StoredPlayer>; // keyed by player.id (UUID)
   hostCloseTimer: ReturnType<typeof setTimeout> | null;
   cleanupTimer: ReturnType<typeof setTimeout> | null;
@@ -92,6 +95,8 @@ const allowedOrigins = parseAllowedOrigins();
 // ── Validation helpers ─────────────────────────────────────────────────────────
 
 const isString = (v: unknown): v is string => typeof v === "string";
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
 
 /**
  * Returns true if the event is allowed under the per-socket sliding-window limit.
@@ -147,33 +152,113 @@ const normalizeQuestion = (question: unknown, index: number): QuizQuestion | nul
   const q = question as Record<string, unknown>;
 
   const prompt = isString(q.prompt) ? q.prompt.trim().slice(0, MAX_PROMPT_LENGTH) : "";
-  const rawOptions = Array.isArray(q.options) ? q.options : [];
-  const options = rawOptions
-    .slice(0, 10)
-    .map((option: unknown, optionIndex: number) => {
-      const o = (typeof option === "object" && option !== null ? option : {}) as Record<
+  const id = isString(q.id) && q.id ? q.id : `question-${index + 1}`;
+  const type = q.type === "poll" || q.type === "number" || q.type === "ranking"
+    ? q.type
+    : "multiple-choice";
+
+  if (!prompt) return null;
+
+  if (type === "multiple-choice" || type === "poll") {
+    const rawOptions = Array.isArray(q.options) ? q.options : [];
+    const options = rawOptions
+      .slice(0, 10)
+      .map((option: unknown, optionIndex: number) => {
+        const o = (typeof option === "object" && option !== null ? option : {}) as Record<
+          string,
+          unknown
+        >;
+        return {
+          id: isString(o.id) && o.id ? o.id : `q${index + 1}-o${optionIndex + 1}`,
+          text: isString(o.text) ? o.text.trim().slice(0, MAX_OPTION_TEXT_LENGTH) : "",
+        };
+      })
+      .filter((option) => option.text.length > 0);
+
+    if (options.length < 2) return null;
+
+    if (type === "poll") {
+      return {
+        id,
+        prompt,
+        type,
+        options,
+      };
+    }
+
+    const correctOptionId =
+      options.some((option) => option.id === q.correctOptionId)
+        ? (q.correctOptionId as string)
+        : options[0].id;
+
+    return {
+      id,
+      prompt,
+      type,
+      options,
+      correctOptionId,
+    };
+  }
+
+  if (type === "number") {
+    if (
+      !isFiniteNumber(q.correctNumber) ||
+      !isFiniteNumber(q.minValue) ||
+      !isFiniteNumber(q.maxValue) ||
+      q.minValue >= q.maxValue
+    ) {
+      return null;
+    }
+
+    return {
+      id,
+      prompt,
+      type,
+      correctNumber: q.correctNumber,
+      minValue: q.minValue,
+      maxValue: q.maxValue,
+    };
+  }
+
+  const rawItems = Array.isArray(q.items) ? q.items : [];
+  const items = rawItems
+    .slice(0, 5)
+    .map((item: unknown, itemIndex: number) => {
+      const entry = (typeof item === "object" && item !== null ? item : {}) as Record<
         string,
         unknown
       >;
       return {
-        id: isString(o.id) && o.id ? o.id : `q${index + 1}-o${optionIndex + 1}`,
-        text: isString(o.text) ? o.text.trim().slice(0, MAX_OPTION_TEXT_LENGTH) : "",
+        id: isString(entry.id) && entry.id ? entry.id : `q${index + 1}-r${itemIndex + 1}`,
+        text: isString(entry.text) ? entry.text.trim().slice(0, MAX_OPTION_TEXT_LENGTH) : "",
       };
     })
-    .filter((option) => option.text.length > 0);
+    .filter((item) => item.text.length > 0);
 
-  if (!prompt || options.length < 2) return null;
+  if (items.length < 3 || items.length > 5) return null;
 
-  const correctOptionId =
-    options.some((option) => option.id === q.correctOptionId)
-      ? (q.correctOptionId as string)
-      : options[0].id;
+  const correctOrder = Array.isArray(q.correctOrder)
+    ? q.correctOrder.filter((value): value is string => isString(value) && value.length > 0)
+    : [];
+  const itemIds = items.map((item) => item.id);
+  const itemIdSet = new Set(itemIds);
+  const orderSet = new Set(correctOrder);
+
+  if (
+    correctOrder.length !== items.length ||
+    orderSet.size !== items.length ||
+    itemIdSet.size !== items.length ||
+    itemIds.some((itemId) => !orderSet.has(itemId))
+  ) {
+    return null;
+  }
 
   return {
-    id: isString(q.id) && q.id ? q.id : `question-${index + 1}`,
+    id,
     prompt,
-    options,
-    correctOptionId,
+    type,
+    items,
+    correctOrder,
   };
 };
 
@@ -234,19 +319,59 @@ const toSnapshot = (room: StoredRoom): RoomSnapshot => ({
   leaderboard: toLeaderboard(room),
 });
 
+const shuffleItems = <T,>(items: T[]): T[] => {
+  const next = [...items];
+
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+
+  return next;
+};
+
 const toPublicQuestion = (
   question: QuizQuestion,
   index: number,
   total: number,
   timeLimit: number,
-): PublicQuestion => ({
-  id: question.id,
-  prompt: question.prompt,
-  options: question.options,
-  index,
-  total,
-  timeLimit,
-});
+): PublicQuestion => {
+  const base = {
+    id: question.id,
+    prompt: question.prompt,
+    index,
+    total,
+    timeLimit,
+  };
+
+  switch (question.type) {
+    case "multiple-choice":
+      return {
+        ...base,
+        type: "multiple-choice",
+        options: question.options,
+      };
+    case "poll":
+      return {
+        ...base,
+        type: "poll",
+        options: question.options,
+      };
+    case "number":
+      return {
+        ...base,
+        type: "number",
+        minValue: question.minValue,
+        maxValue: question.maxValue,
+      };
+    case "ranking":
+      return {
+        ...base,
+        type: "ranking",
+        items: shuffleItems(question.items),
+      };
+  }
+};
 
 // ── Emit helpers ──────────────────────────────────────────────────────────────
 
@@ -265,15 +390,112 @@ const emitLeaderboard = (room: StoredRoom) => {
     room.questionAutoTimer = null;
   }
 
-  room.status = "leaderboard";
-
-  // Reveal the correct answer so players see what they got right or wrong.
   const question =
     room.currentQuestionIndex !== null
       ? room.quiz.questions[room.currentQuestionIndex]
       : null;
+  let revealPayload: QuestionRevealPayload | null = null;
+
   if (question) {
-    const revealPayload: QuestionRevealPayload = { correctOptionId: question.correctOptionId };
+    switch (question.type) {
+      case "multiple-choice": {
+        revealPayload = {
+          type: "multiple-choice",
+          correctOptionId: question.correctOptionId,
+        };
+        break;
+      }
+      case "poll": {
+        const voteCounts = Object.fromEntries(question.options.map((option) => [option.id, 0]));
+        const rankedOptions = question.options.map((option, optionIndex) => ({
+          optionId: option.id,
+          optionIndex,
+          count: 0,
+        }));
+
+        for (const player of room.players.values()) {
+          if (player.currentAnswer?.type !== "poll") continue;
+          voteCounts[player.currentAnswer.optionId] =
+            (voteCounts[player.currentAnswer.optionId] ?? 0) + 1;
+        }
+
+        rankedOptions.forEach((entry) => {
+          entry.count = voteCounts[entry.optionId] ?? 0;
+        });
+        rankedOptions.sort(
+          (left, right) => right.count - left.count || left.optionIndex - right.optionIndex,
+        );
+
+        const majorityOptionId = rankedOptions[0]?.optionId ?? question.options[0]?.id ?? "";
+        const secondOptionId = rankedOptions[1]?.optionId ?? null;
+
+        for (const player of room.players.values()) {
+          if (player.currentAnswer?.type !== "poll") continue;
+          if (player.currentAnswer.optionId === majorityOptionId) {
+            player.score += 1000;
+          } else if (secondOptionId && player.currentAnswer.optionId === secondOptionId) {
+            player.score += 400;
+          }
+        }
+
+        revealPayload = {
+          type: "poll",
+          voteCounts,
+          majorityOptionId,
+        };
+        break;
+      }
+      case "number": {
+        const range = question.maxValue - question.minValue;
+
+        for (const player of room.players.values()) {
+          if (player.currentAnswer?.type !== "number") continue;
+          const pointsEarned =
+            range === 0
+              ? 1000
+              : Math.max(
+                  0,
+                  Math.round(
+                    1000 * (1 - Math.abs(player.currentAnswer.guess - question.correctNumber) / range),
+                  ),
+                );
+          player.score += pointsEarned;
+        }
+
+        revealPayload = {
+          type: "number",
+          correctNumber: question.correctNumber,
+        };
+        break;
+      }
+      case "ranking": {
+        for (const player of room.players.values()) {
+          if (player.currentAnswer?.type !== "ranking") continue;
+          const rankingAnswer = player.currentAnswer;
+          const correctlyPlacedCount = question.correctOrder.reduce(
+            (count, itemId, itemIndex) =>
+              count + (rankingAnswer.order[itemIndex] === itemId ? 1 : 0),
+            0,
+          );
+          player.score += Math.round((1000 * correctlyPlacedCount) / question.correctOrder.length);
+        }
+
+        revealPayload = {
+          type: "ranking",
+          correctOrder: question.correctOrder,
+        };
+        break;
+      }
+    }
+  }
+
+  for (const player of room.players.values()) {
+    player.currentAnswer = null;
+  }
+
+  room.status = "leaderboard";
+
+  if (revealPayload) {
     io.to(room.code).emit("question:revealed", revealPayload);
   }
 
@@ -326,16 +548,20 @@ const startQuestion = (room: StoredRoom, questionIndex: number) => {
     // when building the leaderboard entry after the question closes.
     player.scoreBeforeCurrentQuestion = player.score;
     player.lastAnsweredQuestionId = null;
+    player.currentAnswer = null;
   }
 
   const question = room.quiz.questions[questionIndex];
   const { timeLimit } = room.quiz;
+  room.activePublicQuestion = toPublicQuestion(
+    question,
+    questionIndex,
+    room.quiz.questions.length,
+    timeLimit,
+  );
   app.log.info({ roomCode: room.code, questionIndex }, "question started");
 
-  io.to(room.code).emit(
-    "question:started",
-    toPublicQuestion(question, questionIndex, room.quiz.questions.length, timeLimit),
-  );
+  io.to(room.code).emit("question:started", room.activePublicQuestion);
   emitRoomUpdate(room);
 
   // Schedule the server-side auto-advance. When all players answer early the manual
@@ -370,6 +596,7 @@ const finishGame = (room: StoredRoom) => {
   room.status = "finished";
   room.currentQuestionIndex = null;
   room.questionStartedAt = null;
+  room.activePublicQuestion = null;
   app.log.info({ roomCode: room.code, players: room.players.size }, "game finished");
   io.to(room.code).emit("game:finished", toSnapshot(room));
 
@@ -395,8 +622,10 @@ const restoreSocketToRoom = (
   socket.join(room.code);
 
   const currentQuestion =
-    room.status === "question" && room.currentQuestionIndex !== null
-      ? toPublicQuestion(
+    (room.status === "question" || room.status === "leaderboard") &&
+    room.currentQuestionIndex !== null
+      ? room.activePublicQuestion ??
+        toPublicQuestion(
           room.quiz.questions[room.currentQuestionIndex],
           room.currentQuestionIndex,
           room.quiz.questions.length,
@@ -455,6 +684,7 @@ const registerRealtimeHandlers = () => {
         status: "lobby",
         currentQuestionIndex: null,
         questionStartedAt: null,
+        activePublicQuestion: null,
         players: new Map(),
         hostCloseTimer: null,
         cleanupTimer: null,
@@ -593,6 +823,7 @@ const registerRealtimeHandlers = () => {
         lastAnsweredQuestionId: null,
         streak: 0,
         scoreBeforeCurrentQuestion: 0,
+        currentAnswer: null,
       };
 
       room.players.set(playerId, player);
@@ -803,9 +1034,9 @@ const registerRealtimeHandlers = () => {
         return;
       }
 
-      const ans = payload as SubmitAnswerPayload;
+      const ans = payload as Partial<SubmitAnswerPayload> & Record<string, unknown>;
 
-      if (!isString(ans.roomCode) || !isString(ans.optionId)) {
+      if (!isString(ans.roomCode) || !isString(ans.type)) {
         emitError(socket, "Invalid answer payload.");
         return;
       }
@@ -817,7 +1048,6 @@ const registerRealtimeHandlers = () => {
         return;
       }
 
-      // Look up the player by their stable token, not by the transient socket.id.
       const player = room.players.get(socket.data.token as string);
 
       if (!player) {
@@ -826,64 +1056,146 @@ const registerRealtimeHandlers = () => {
       }
 
       const question = room.quiz.questions[room.currentQuestionIndex];
-      const selectedOption = question.options.find((option) => option.id === ans.optionId);
-
-      if (!selectedOption) {
-        emitError(socket, "That answer option is not valid.");
-        return;
-      }
 
       if (player.lastAnsweredQuestionId === question.id) {
         emitError(socket, "You already answered this question.");
         return;
       }
 
-      player.lastAnsweredQuestionId = question.id;
-
-      // Default to wrong — overwritten below if the answer is correct.
-      let isCorrect = false;
-      let pointsEarned = 0;
-
-      if (ans.optionId === question.correctOptionId) {
-        isCorrect = true;
-        player.streak += 1;
-
-        // Time-based scoring: a player who answers at the very start earns 1000 pts,
-        // and a player who answers right at the limit earns 300 pts (the floor).
-        // timeFraction is clamped to [0, 1] to guard against clock skew / network lag.
-        const elapsedMs = Math.max(0, Date.now() - (room.questionStartedAt ?? Date.now()));
-        const timeFraction = Math.min(elapsedMs / (room.quiz.timeLimit * 1000), 1);
-        const basePoints = Math.max(300, Math.round(1000 - 700 * timeFraction)); // 1000 → 300 over time
-
-        // Streak bonus: each consecutive correct answer rewards the player more.
-        // Thresholds are intentionally generous to keep the mechanic exciting without
-        // being unbalancing (max bonus is 300 pts on top of a 1000 pt question).
-        const streakBonus =
-          player.streak >= 5 ? 300
-          : player.streak >= 3 ? 150
-          : player.streak >= 2 ? 75
-          : 0;
-
-        pointsEarned = basePoints + streakBonus;
-        player.score += pointsEarned;
-      } else {
-        // Any wrong answer breaks the streak back to zero immediately.
-        player.streak = 0;
+      if (ans.type !== question.type) {
+        emitError(socket, "That answer does not match the current question type.");
+        return;
       }
 
-      // Acknowledge the answer to the answering player with result details.
-      // We emit only to the sender — other players learn who answered via emitAnswerCount.
-      const acceptedPayload: AnswerAcceptedPayload = {
-        isCorrect,
-        pointsEarned,
-        streak: player.streak,
-      };
-      socket.emit("answer:accepted", acceptedPayload);
+      let acceptedPayload: AnswerAcceptedPayload;
 
-      // Broadcast a lightweight count update so all clients can show progress.
+      switch (question.type) {
+        case "multiple-choice": {
+          if (!isString(ans.optionId)) {
+            emitError(socket, "That answer option is not valid.");
+            return;
+          }
+
+          const selectedOption = question.options.find((option) => option.id === ans.optionId);
+
+          if (!selectedOption) {
+            emitError(socket, "That answer option is not valid.");
+            return;
+          }
+
+          player.lastAnsweredQuestionId = question.id;
+          player.currentAnswer = null;
+
+          let isCorrect = false;
+          let pointsEarned = 0;
+
+          if (ans.optionId === question.correctOptionId) {
+            isCorrect = true;
+            player.streak += 1;
+
+            const elapsedMs = Math.max(0, Date.now() - (room.questionStartedAt ?? Date.now()));
+            const timeFraction = Math.min(elapsedMs / (room.quiz.timeLimit * 1000), 1);
+            const basePoints = Math.max(300, Math.round(1000 - 700 * timeFraction));
+            const streakBonus =
+              player.streak >= 5 ? 300
+              : player.streak >= 3 ? 150
+              : player.streak >= 2 ? 75
+              : 0;
+
+            pointsEarned = basePoints + streakBonus;
+            player.score += pointsEarned;
+          } else {
+            player.streak = 0;
+          }
+
+          acceptedPayload = {
+            pending: false,
+            isCorrect,
+            pointsEarned,
+            streak: player.streak,
+          };
+          break;
+        }
+        case "poll": {
+          if (!isString(ans.optionId) || !question.options.some((option) => option.id === ans.optionId)) {
+            emitError(socket, "That answer option is not valid.");
+            return;
+          }
+
+          player.lastAnsweredQuestionId = question.id;
+          player.currentAnswer = {
+            roomCode: room.code,
+            type: "poll",
+            optionId: ans.optionId,
+          };
+          acceptedPayload = {
+            pending: true,
+            isCorrect: false,
+            pointsEarned: 0,
+            streak: player.streak,
+          };
+          break;
+        }
+        case "number": {
+          if (
+            !isFiniteNumber(ans.guess) ||
+            ans.guess < question.minValue ||
+            ans.guess > question.maxValue
+          ) {
+            emitError(socket, "That guess is outside the allowed range.");
+            return;
+          }
+
+          player.lastAnsweredQuestionId = question.id;
+          player.currentAnswer = {
+            roomCode: room.code,
+            type: "number",
+            guess: ans.guess,
+          };
+          acceptedPayload = {
+            pending: true,
+            isCorrect: false,
+            pointsEarned: 0,
+            streak: player.streak,
+          };
+          break;
+        }
+        case "ranking": {
+          const order = Array.isArray(ans.order)
+            ? ans.order.filter((value): value is string => isString(value) && value.length > 0)
+            : [];
+          const itemIds = question.items.map((item) => item.id);
+          const itemIdSet = new Set(itemIds);
+          const orderSet = new Set(order);
+
+          if (
+            order.length !== itemIds.length ||
+            orderSet.size !== itemIds.length ||
+            itemIds.some((itemId) => !orderSet.has(itemId))
+          ) {
+            emitError(socket, "That ranking order is not valid.");
+            return;
+          }
+
+          player.lastAnsweredQuestionId = question.id;
+          player.currentAnswer = {
+            roomCode: room.code,
+            type: "ranking",
+            order,
+          };
+          acceptedPayload = {
+            pending: true,
+            isCorrect: false,
+            pointsEarned: 0,
+            streak: player.streak,
+          };
+          break;
+        }
+      }
+
+      socket.emit("answer:accepted", acceptedPayload);
       emitAnswerCount(room);
 
-      // Only connected players count toward the auto-advance threshold.
       const connectedPlayers = Array.from(room.players.values()).filter((pl) => pl.connected);
       const everyoneAnswered =
         connectedPlayers.length > 0 &&
