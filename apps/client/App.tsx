@@ -19,8 +19,6 @@ export default function App() {
     [game.room],
   );
 
-  /* ── Socket-driven actions ── */
-
   const checkRoom = (roomCode = game.roomCodeInput) => {
     const normalizedRoomCode = roomCode.trim().toUpperCase();
 
@@ -93,15 +91,57 @@ export default function App() {
   };
 
   const submitAnswer = () => {
-    if (!game.room || !game.selectedOptionId || game.hasAnsweredCurrentQuestion) {
+    if (!game.room || !game.currentQuestion || game.hasAnsweredCurrentQuestion) {
       return;
     }
+
+    let payload:
+      | { roomCode: string; type: "multiple-choice" | "poll"; optionId: string }
+      | { roomCode: string; type: "number"; guess: number }
+      | { roomCode: string; type: "ranking"; order: string[] }
+      | null = null;
+
+    switch (game.currentQuestion.type) {
+      case "multiple-choice":
+      case "poll":
+        if (!game.selectedOptionId) {
+          return;
+        }
+        payload = {
+          roomCode: game.room.roomCode,
+          type: game.currentQuestion.type,
+          optionId: game.selectedOptionId,
+        };
+        break;
+      case "number":
+        if (game.numberGuess === null) {
+          return;
+        }
+        payload = {
+          roomCode: game.room.roomCode,
+          type: "number",
+          guess: game.numberGuess,
+        };
+        break;
+      case "ranking":
+        if (game.rankingOrder.length !== game.currentQuestion.items.length) {
+          return;
+        }
+        payload = {
+          roomCode: game.room.roomCode,
+          type: "ranking",
+          order: game.rankingOrder,
+        };
+        break;
+    }
+
+    if (!payload) {
+      return;
+    }
+
     game.setPendingAction("submit-answer");
     game.setFeedback({ tone: "info", message: "Locked in!" });
-    game.socketRef.current?.emit("player:submit-answer", {
-      roomCode: game.room.roomCode,
-      optionId: game.selectedOptionId,
-    });
+    game.socketRef.current?.emit("player:submit-answer", payload);
   };
 
   const openPlayerTab = () => {
@@ -141,8 +181,6 @@ export default function App() {
     game.setPendingAction,
   ]);
 
-  /* ── Derived state ── */
-
   const canCheckRoom =
     game.connectionState === "connected" &&
     game.pendingAction === null &&
@@ -159,8 +197,6 @@ export default function App() {
     editor.hostName.trim().length > 0 &&
     quizIssues.length === 0;
 
-  /* ── Render ── */
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
@@ -168,7 +204,6 @@ export default function App() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header (hidden during game) */}
         {game.screen !== "game" && (
           <View style={styles.headerContainer}>
             <Text style={styles.title}>QuizGame</Text>
@@ -181,7 +216,6 @@ export default function App() {
 
         <FeedbackBanner feedback={game.feedback} />
 
-        {/* Screen: Enter room code */}
         {game.screen === "join-code" && (
           <JoinCodeScreen
             roomCodeInput={game.roomCodeInput}
@@ -196,7 +230,6 @@ export default function App() {
           />
         )}
 
-        {/* Screen: Choose display name */}
         {game.screen === "join-name" && game.checkedRoom && (
           <JoinNameScreen
             checkedRoom={game.checkedRoom}
@@ -212,7 +245,6 @@ export default function App() {
           />
         )}
 
-        {/* Screen: Host setup */}
         {game.screen === "host-setup" && !game.room && (
           <HostSetupScreen
             hostName={editor.hostName}
@@ -223,7 +255,13 @@ export default function App() {
             onQuizTitleChange={editor.updateQuizTitle}
             onTimeLimitChange={editor.updateTimeLimit}
             onPromptChange={editor.updateQuestionPrompt}
+            onTypeChange={editor.updateQuestionType}
             onOptionChange={editor.updateQuestionOption}
+            onPollOptionChange={editor.updatePollOption}
+            onNumberFieldChange={editor.updateNumberField}
+            onRankingItemChange={editor.updateRankingItem}
+            onAddRankingItem={editor.addRankingItem}
+            onRemoveRankingItem={editor.removeRankingItem}
             onCorrectOptionChange={editor.setCorrectOption}
             onRemoveQuestion={editor.removeQuestion}
             onAddQuestion={editor.addQuestion}
@@ -239,7 +277,6 @@ export default function App() {
           />
         )}
 
-        {/* Screen: Active game */}
         {game.screen === "game" && game.room && (
           <GameScreen
             room={game.room}
@@ -249,11 +286,15 @@ export default function App() {
             currentQuestion={game.currentQuestion}
             joinUrl={joinUrl}
             selectedOptionId={game.selectedOptionId}
+            numberGuess={game.numberGuess}
+            rankingOrder={game.rankingOrder}
             hasAnsweredCurrentQuestion={game.hasAnsweredCurrentQuestion}
             answeredCount={game.answeredCount}
             lastAnswerResult={game.lastAnswerResult}
             questionReveal={game.questionReveal}
             onSelectOption={game.setSelectedOptionId}
+            onNumberGuessChange={game.setNumberGuess}
+            onRankingOrderChange={game.setRankingOrder}
             onStartGame={startGame}
             onRevealLeaderboard={revealLeaderboard}
             onNextQuestion={nextQuestion}

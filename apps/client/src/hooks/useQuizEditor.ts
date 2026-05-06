@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { createEmptyQuestion, createStarterQuiz, type QuizDraft } from "@quizgame/contracts";
+import {
+  createEmptyNumberQuestion,
+  createEmptyPollQuestion,
+  createEmptyQuestion,
+  createEmptyRankingQuestion,
+  createStarterQuiz,
+  type QuestionType,
+  type QuizDraft,
+} from "@quizgame/contracts";
 import { SAMPLE_HOST_NAME, SAMPLE_QUIZ } from "../devSampleQuiz";
 
 const QUESTION_ID_PATTERN = /^question-(\d+)$/;
@@ -12,6 +20,43 @@ const getNextQuestionSeed = (quiz: QuizDraft) =>
     return Math.max(highestSeed, numericId);
   }, 0);
 
+const getQuestionSeed = (questionId: string) => {
+  const match = QUESTION_ID_PATTERN.exec(questionId);
+  return match ? Math.max(Number(match[1]) - 1, 0) : 0;
+};
+
+const createEmptyQuestionByType = (type: QuestionType, seed: number) => {
+  switch (type) {
+    case "multiple-choice":
+      return createEmptyQuestion(seed);
+    case "poll":
+      return createEmptyPollQuestion(seed);
+    case "number":
+      return createEmptyNumberQuestion(seed);
+    case "ranking":
+      return createEmptyRankingQuestion(seed);
+  }
+};
+
+const updateOptionText = (
+  quiz: QuizDraft,
+  questionIndex: number,
+  optionIndex: number,
+  text: string,
+): QuizDraft => ({
+  ...quiz,
+  questions: quiz.questions.map((question, index) =>
+    index === questionIndex && (question.type === "multiple-choice" || question.type === "poll")
+      ? {
+          ...question,
+          options: question.options.map((option, innerIndex) =>
+            innerIndex === optionIndex ? { ...option, text } : option,
+          ),
+        }
+      : question,
+  ),
+});
+
 export interface QuizEditor {
   quiz: QuizDraft;
   setQuiz: React.Dispatch<React.SetStateAction<QuizDraft>>;
@@ -22,7 +67,17 @@ export interface QuizEditor {
   updateQuizTitle: (title: string) => void;
   updateTimeLimit: (timeLimit: number) => void;
   updateQuestionPrompt: (questionIndex: number, prompt: string) => void;
+  updateQuestionType: (questionIndex: number, type: QuestionType) => void;
   updateQuestionOption: (questionIndex: number, optionIndex: number, text: string) => void;
+  updatePollOption: (questionIndex: number, optionIndex: number, text: string) => void;
+  updateNumberField: (
+    questionIndex: number,
+    field: "correctNumber" | "minValue" | "maxValue",
+    value: number,
+  ) => void;
+  updateRankingItem: (questionIndex: number, itemIndex: number, text: string) => void;
+  addRankingItem: (questionIndex: number) => void;
+  removeRankingItem: (questionIndex: number, itemIndex: number) => void;
   setCorrectOption: (questionIndex: number, optionId: string) => void;
   addQuestion: () => void;
   removeQuestion: (questionId: string) => void;
@@ -51,19 +106,65 @@ export function useQuizEditor(): QuizEditor {
     }));
   };
 
+  const updateQuestionType = (questionIndex: number, type: QuestionType) => {
+    setQuiz((current) => ({
+      ...current,
+      questions: current.questions.map((question, index) => {
+        if (index !== questionIndex) {
+          return question;
+        }
+
+        const seed = getQuestionSeed(question.id);
+        const freshQuestion = createEmptyQuestionByType(type, seed);
+        return { ...freshQuestion, id: question.id, prompt: question.prompt };
+      }),
+    }));
+  };
+
   const updateQuestionOption = (
     questionIndex: number,
     optionIndex: number,
     text: string,
   ) => {
+    setQuiz((current) => updateOptionText(current, questionIndex, optionIndex, text));
+  };
+
+  const updatePollOption = (
+    questionIndex: number,
+    optionIndex: number,
+    text: string,
+  ) => {
+    setQuiz((current) => updateOptionText(current, questionIndex, optionIndex, text));
+  };
+
+  const updateNumberField = (
+    questionIndex: number,
+    field: "correctNumber" | "minValue" | "maxValue",
+    value: number,
+  ) => {
     setQuiz((current) => ({
       ...current,
       questions: current.questions.map((question, index) =>
-        index === questionIndex
+        index === questionIndex && question.type === "number"
+          ? { ...question, [field]: value }
+          : question,
+      ),
+    }));
+  };
+
+  const updateRankingItem = (
+    questionIndex: number,
+    itemIndex: number,
+    text: string,
+  ) => {
+    setQuiz((current) => ({
+      ...current,
+      questions: current.questions.map((question, index) =>
+        index === questionIndex && question.type === "ranking"
           ? {
               ...question,
-              options: question.options.map((option, innerIndex) =>
-                innerIndex === optionIndex ? { ...option, text } : option,
+              items: question.items.map((item, innerIndex) =>
+                innerIndex === itemIndex ? { ...item, text } : item,
               ),
             }
           : question,
@@ -71,11 +172,54 @@ export function useQuizEditor(): QuizEditor {
     }));
   };
 
+  const addRankingItem = (questionIndex: number) => {
+    setQuiz((current) => ({
+      ...current,
+      questions: current.questions.map((question, index) => {
+        if (index !== questionIndex || question.type !== "ranking" || question.items.length >= 5) {
+          return question;
+        }
+
+        const seed = getQuestionSeed(question.id) + 1;
+        const nextItemNumber = question.items.length + 1;
+        const nextId = `q${seed}-r${nextItemNumber}`;
+
+        return {
+          ...question,
+          items: [...question.items, { id: nextId, text: "" }],
+          correctOrder: [...question.correctOrder, nextId],
+        };
+      }),
+    }));
+  };
+
+  const removeRankingItem = (questionIndex: number, itemIndex: number) => {
+    setQuiz((current) => ({
+      ...current,
+      questions: current.questions.map((question, index) => {
+        if (index !== questionIndex || question.type !== "ranking" || question.items.length <= 3) {
+          return question;
+        }
+
+        const removedItem = question.items[itemIndex];
+        if (!removedItem) {
+          return question;
+        }
+
+        return {
+          ...question,
+          items: question.items.filter((_, innerIndex) => innerIndex !== itemIndex),
+          correctOrder: question.correctOrder.filter((itemId) => itemId !== removedItem.id),
+        };
+      }),
+    }));
+  };
+
   const setCorrectOption = (questionIndex: number, optionId: string) => {
     setQuiz((current) => ({
       ...current,
       questions: current.questions.map((question, index) =>
-        index === questionIndex
+        index === questionIndex && question.type === "multiple-choice"
           ? { ...question, correctOptionId: optionId }
           : question,
       ),
@@ -138,7 +282,13 @@ export function useQuizEditor(): QuizEditor {
     updateQuizTitle,
     updateTimeLimit,
     updateQuestionPrompt,
+    updateQuestionType,
     updateQuestionOption,
+    updatePollOption,
+    updateNumberField,
+    updateRankingItem,
+    addRankingItem,
+    removeRankingItem,
     setCorrectOption,
     addQuestion,
     removeQuestion,
