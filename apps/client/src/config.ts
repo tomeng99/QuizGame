@@ -39,6 +39,25 @@ export const getApiBase = (): string => {
 
 export const API_BASE = getApiBase();
 
+/**
+ * True in local dev (Metro / Expo dev server) and on any deployed
+ * environment whose hostname starts with "dev-" (e.g. dev-quiz.eng.software).
+ * Used to gate dev-only UI like the sample-quiz helper buttons.
+ */
+export const IS_DEV_ENVIRONMENT: boolean = (() => {
+  if (Constants.expoConfig?.hostUri) return true;
+
+  if (Platform.OS === "web" && typeof window !== "undefined" && window.location?.hostname) {
+    const { hostname, port } = window.location;
+    const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
+    const isExpoDevServer = port === "8081" || port === "19006";
+    const isDevHost = hostname.startsWith("dev-");
+    return isLocalhost || isExpoDevServer || isDevHost;
+  }
+
+  return false;
+})();
+
 const getAppBase = (): string | null => {
   if (process.env.EXPO_PUBLIC_APP_URL) {
     const configured = normalizeBaseUrl(process.env.EXPO_PUBLIC_APP_URL);

@@ -1,5 +1,6 @@
 import { Pressable, Text, TextInput, View } from "react-native";
 import type { QuizDraft } from "@quizgame/contracts";
+import { IS_DEV_ENVIRONMENT } from "../config";
 import { styles } from "../styles";
 import { colors } from "../theme";
 import { QuestionEditorCard } from "../components";
@@ -70,7 +71,7 @@ export function HostSetupScreen({
         </Text>
       </View>
 
-      {__DEV__ && (
+      {IS_DEV_ENVIRONMENT && (
         <Pressable onPress={onLoadSampleQuiz} style={styles.devButton}>
           <Text style={styles.devButtonText}>⚡ Load sample quiz</Text>
         </Pressable>
