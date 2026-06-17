@@ -6,6 +6,9 @@ on:
       - main
       - dev
   pull_request:
+    branches:
+      - main
+      - dev
 
 jobs:
   check:
@@ -18,11 +21,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run checks
-        run: npm run check
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
