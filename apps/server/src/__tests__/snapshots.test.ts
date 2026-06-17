@@ -1,11 +1,6 @@
-import { describe, expect, it } from "vitest";
 import type { QuizQuestion } from "@quizgame/contracts";
-import {
-  toLeaderboard,
-  toPlayers,
-  toPublicQuestion,
-  toSnapshot,
-} from "../index";
+import { describe, expect, it } from "vitest";
+import { toLeaderboard, toPlayers, toPublicQuestion, toSnapshot } from "../index";
 import { makePlayer, makeRoom } from "./helpers";
 
 const mcQuestion: QuizQuestion = {
@@ -88,9 +83,7 @@ describe("toLeaderboard", () => {
   it("marks answeredCurrentQuestion false when player answered a different question", () => {
     const room = makeRoom({
       currentQuestionIndex: 0,
-      players: [
-        makePlayer({ id: "p1", name: "Alice", lastAnsweredQuestionId: "other-id" }),
-      ],
+      players: [makePlayer({ id: "p1", name: "Alice", lastAnsweredQuestionId: "other-id" })],
     });
     const [entry] = toLeaderboard(room);
     expect(entry.answeredCurrentQuestion).toBe(false);
@@ -125,9 +118,7 @@ describe("toSnapshot", () => {
       hostName: "GameMaster",
       status: "question",
       currentQuestionIndex: 0,
-      players: [
-        makePlayer({ id: "p1", name: "Alice", score: 10, connected: true }),
-      ],
+      players: [makePlayer({ id: "p1", name: "Alice", score: 10, connected: true })],
     });
 
     const snapshot = toSnapshot(room);
@@ -139,9 +130,7 @@ describe("toSnapshot", () => {
       currentQuestionIndex: 0,
       totalQuestions: 1,
       players: [{ id: "p1", name: "Alice", score: 10, connected: true }],
-      leaderboard: [
-        expect.objectContaining({ playerId: "p1", name: "Alice", score: 10 }),
-      ],
+      leaderboard: [expect.objectContaining({ playerId: "p1", name: "Alice", score: 10 })],
     });
   });
 
@@ -177,7 +166,10 @@ describe("toPublicQuestion", () => {
       id: "q2",
       prompt: "Best color?",
       type: "poll",
-      options: [{ id: "a", text: "Red" }, { id: "b", text: "Blue" }],
+      options: [
+        { id: "a", text: "Red" },
+        { id: "b", text: "Blue" },
+      ],
     };
     const publicQ = toPublicQuestion(poll, 1, 3, 20) as Record<string, unknown>;
     expect(publicQ.correctOptionId).toBeUndefined();

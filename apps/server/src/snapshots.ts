@@ -44,7 +44,7 @@ export const toSnapshot = (room: StoredRoom): RoomSnapshot => ({
   leaderboard: toLeaderboard(room),
 });
 
-const shuffleItems = <T,>(items: T[]): T[] => {
+const shuffleItems = <T>(items: T[]): T[] => {
   const next = [...items];
 
   for (let index = next.length - 1; index > 0; index -= 1) {

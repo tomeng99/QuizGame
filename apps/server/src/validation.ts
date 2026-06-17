@@ -1,9 +1,5 @@
 import type { QuizDraft, QuizQuestion } from "@quizgame/contracts";
-import {
-  MAX_QUESTIONS,
-  MAX_OPTION_TEXT_LENGTH,
-  MAX_PROMPT_LENGTH,
-} from "./constants";
+import { MAX_OPTION_TEXT_LENGTH, MAX_PROMPT_LENGTH, MAX_QUESTIONS } from "./constants";
 
 // ── Validation helpers ─────────────────────────────────────────────────────────
 
@@ -20,9 +16,8 @@ export const normalizeQuestion = (question: unknown, index: number): QuizQuestio
 
   const prompt = isString(q.prompt) ? q.prompt.trim().slice(0, MAX_PROMPT_LENGTH) : "";
   const id = isString(q.id) && q.id ? q.id : `question-${index + 1}`;
-  const type = q.type === "poll" || q.type === "number" || q.type === "ranking"
-    ? q.type
-    : "multiple-choice";
+  const type =
+    q.type === "poll" || q.type === "number" || q.type === "ranking" ? q.type : "multiple-choice";
 
   if (!prompt) return null;
 
@@ -53,10 +48,9 @@ export const normalizeQuestion = (question: unknown, index: number): QuizQuestio
       };
     }
 
-    const correctOptionId =
-      options.some((option) => option.id === q.correctOptionId)
-        ? (q.correctOptionId as string)
-        : options[0].id;
+    const correctOptionId = options.some((option) => option.id === q.correctOptionId)
+      ? (q.correctOptionId as string)
+      : options[0].id;
 
     return {
       id,

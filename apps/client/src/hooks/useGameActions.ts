@@ -44,11 +44,7 @@ export function useGameActions(game: GameState, editor: QuizEditor) {
   };
 
   const createRoom = () => {
-    if (
-      game.connectionState !== "connected" ||
-      !editor.hostName.trim() ||
-      quizIssues.length > 0
-    ) {
+    if (game.connectionState !== "connected" || !editor.hostName.trim() || quizIssues.length > 0) {
       return;
     }
     game.setPendingAction("create-room");
@@ -75,8 +71,7 @@ export function useGameActions(game: GameState, editor: QuizEditor) {
 
   const nextQuestion = () => {
     if (!game.room) return;
-    const isLast =
-      game.room.currentQuestionIndex === game.room.totalQuestions - 1;
+    const isLast = game.room.currentQuestionIndex === game.room.totalQuestions - 1;
     game.setPendingAction("next-question");
     game.setFeedback({
       tone: "info",

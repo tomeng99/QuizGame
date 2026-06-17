@@ -1,22 +1,17 @@
-import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
-import QRCodeSVG from "react-native-qrcode-svg";
 import type {
   AnswerAcceptedPayload,
   PublicQuestion,
   QuestionRevealPayload,
   RoomSnapshot,
 } from "@quizgame/contracts";
+import { useEffect, useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import QRCodeSVG from "react-native-qrcode-svg";
+import { LeaderboardRow, RankingQuestion, SliderQuestion, StatusChip } from "../components";
 import { IS_DEV_ENVIRONMENT } from "../config";
+import { OPTION_THEMES } from "../constants";
 import { styles } from "../styles";
 import { colors } from "../theme";
-import {
-  StatusChip,
-  LeaderboardRow,
-  RankingQuestion,
-  SliderQuestion,
-} from "../components";
-import { OPTION_THEMES } from "../constants";
 import type { ConnectionState, PendingAction } from "../types";
 
 interface GameScreenProps {
@@ -93,9 +88,7 @@ export function GameScreen({
   }, [currentQuestion, room.status]);
 
   const timerFraction =
-    currentQuestion && secondsLeft !== null
-      ? secondsLeft / currentQuestion.timeLimit
-      : 1;
+    currentQuestion && secondsLeft !== null ? secondsLeft / currentQuestion.timeLimit : 1;
 
   const timerColor =
     timerFraction > 0.5
@@ -121,12 +114,14 @@ export function GameScreen({
   })();
 
   const renderOptionGrid = (mode: "multiple-choice" | "poll") => {
-    if (!currentQuestion || (currentQuestion.type !== "multiple-choice" && currentQuestion.type !== "poll")) {
+    if (
+      !currentQuestion ||
+      (currentQuestion.type !== "multiple-choice" && currentQuestion.type !== "poll")
+    ) {
       return null;
     }
 
-    const pollReveal =
-      mode === "poll" && questionReveal?.type === "poll" ? questionReveal : null;
+    const pollReveal = mode === "poll" && questionReveal?.type === "poll" ? questionReveal : null;
     const multipleChoiceReveal =
       mode === "multiple-choice" && questionReveal?.type === "multiple-choice"
         ? questionReveal
@@ -142,25 +137,28 @@ export function GameScreen({
             multipleChoiceReveal !== null && option.id === multipleChoiceReveal.correctOptionId;
           const isMyWrongAnswer = multipleChoiceReveal !== null && selected && !isCorrectOption;
           const isMajorityOption = pollReveal !== null && option.id === pollReveal.majorityOptionId;
-          const bgColor = isCorrectOption || isMajorityOption
-            ? `${colors.successBright}26`
-            : isMyWrongAnswer
-              ? `${colors.errorBright}20`
-              : selected
-                ? theme.bg
-                : `${theme.bg}25`;
-          const borderColor = isCorrectOption || isMajorityOption
-            ? colors.successBright
-            : isMyWrongAnswer
-              ? colors.errorBright
-              : selected
-                ? theme.bg
-                : `${theme.bg}50`;
+          const bgColor =
+            isCorrectOption || isMajorityOption
+              ? `${colors.successBright}26`
+              : isMyWrongAnswer
+                ? `${colors.errorBright}20`
+                : selected
+                  ? theme.bg
+                  : `${theme.bg}25`;
+          const borderColor =
+            isCorrectOption || isMajorityOption
+              ? colors.successBright
+              : isMyWrongAnswer
+                ? colors.errorBright
+                : selected
+                  ? theme.bg
+                  : `${theme.bg}50`;
           const voteCount = pollReveal?.voteCounts[option.id] ?? 0;
           const totalVotes = pollReveal
             ? Object.values(pollReveal.voteCounts).reduce((sum, count) => sum + count, 0)
             : 0;
-          const voteWidth = totalVotes > 0 ? `${(voteCount / totalVotes) * 100}%` as `${number}%` : "0%";
+          const voteWidth =
+            totalVotes > 0 ? (`${(voteCount / totalVotes) * 100}%` as `${number}%`) : "0%";
 
           return (
             <Pressable
@@ -262,8 +260,7 @@ export function GameScreen({
                     <QRCodeSVG value={joinUrl} size={256} />
                   </View>
                   <Text style={styles.qrCaption}>
-                    Players can scan this with their phone and land straight on
-                    the join screen.
+                    Players can scan this with their phone and land straight on the join screen.
                   </Text>
                 </View>
               )}
@@ -314,10 +311,7 @@ export function GameScreen({
               <Pressable
                 disabled={pendingAction !== null}
                 onPress={onRevealLeaderboard}
-                style={[
-                  styles.secondaryBigButton,
-                  pendingAction !== null && styles.disabledButton,
-                ]}
+                style={[styles.secondaryBigButton, pendingAction !== null && styles.disabledButton]}
               >
                 <Text style={styles.secondaryBigButtonText}>
                   {pendingAction === "show-leaderboard" ? "revealing..." : "Show scores"}
@@ -331,10 +325,7 @@ export function GameScreen({
               <Pressable
                 disabled={pendingAction !== null}
                 onPress={onNextQuestion}
-                style={[
-                  styles.bigButton,
-                  pendingAction !== null && styles.disabledButton,
-                ]}
+                style={[styles.bigButton, pendingAction !== null && styles.disabledButton]}
               >
                 <Text style={styles.bigButtonText}>
                   {pendingAction === "next-question"
@@ -359,9 +350,7 @@ export function GameScreen({
 
       {!isHost && room.status === "lobby" && (
         <View style={styles.waitingCard}>
-          <Text style={styles.waitingText}>
-            You're in! Waiting for {room.hostName} to start...
-          </Text>
+          <Text style={styles.waitingText}>You're in! Waiting for {room.hostName} to start...</Text>
         </View>
       )}
       {!isHost && room.status === "finished" && (
@@ -448,9 +437,7 @@ export function GameScreen({
                     : "Wrong answer"}
               </Text>
               {lastAnswerResult.pending ? (
-                <Text style={styles.answerResultPoints}>
-                  Points revealed when time's up.
-                </Text>
+                <Text style={styles.answerResultPoints}>Points revealed when time's up.</Text>
               ) : lastAnswerResult.isCorrect ? (
                 <Text style={styles.answerResultPoints}>
                   +{lastAnswerResult.pointsEarned} points

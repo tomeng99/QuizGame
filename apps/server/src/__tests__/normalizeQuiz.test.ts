@@ -4,7 +4,10 @@ import { MAX_QUESTIONS, normalizeQuiz } from "../index";
 const validQuestion = {
   prompt: "What is 2 + 2?",
   type: "multiple-choice" as const,
-  options: [{ id: "a", text: "3" }, { id: "b", text: "4" }],
+  options: [
+    { id: "a", text: "3" },
+    { id: "b", text: "4" },
+  ],
   correctOptionId: "b",
 };
 

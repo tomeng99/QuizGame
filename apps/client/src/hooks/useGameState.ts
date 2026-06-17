@@ -1,19 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { Socket } from "socket.io-client";
 import type {
   AnswerAcceptedPayload,
   CheckRoomResult,
-  QuestionRevealPayload,
   PublicQuestion,
+  QuestionRevealPayload,
   RoomSnapshot,
 } from "@quizgame/contracts";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { Socket } from "socket.io-client";
 import { clearRoomCodeFromUrl, getRoomCodeFromUrl } from "../config";
-import type {
-  ConnectionState,
-  FeedbackState,
-  PendingAction,
-  Screen,
-} from "../types";
+import type { ConnectionState, FeedbackState, PendingAction, Screen } from "../types";
 import { useSessionStorage } from "./useSessionStorage";
 import { useSocketConnection } from "./useSocketConnection";
 

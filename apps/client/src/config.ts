@@ -3,7 +3,10 @@ import { Platform } from "react-native";
 
 const normalizeBaseUrl = (value: string) => value.trim().replace(/\/+$/, "");
 const normalizeRoomCode = (value: string) =>
-  value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
 const ROOM_CODE_LENGTH = 6;
 const ROOM_CODE_QUERY_PARAM = "roomCode";
 

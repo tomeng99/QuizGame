@@ -1,7 +1,4 @@
-import { randomUUID } from "crypto";
-import type { FastifyBaseLogger } from "fastify";
-import type { Server, Socket } from "socket.io";
-import {
+import type {
   AnswerAcceptedPayload,
   AnswerCountPayload,
   CheckRoomPayload,
@@ -13,6 +10,9 @@ import {
   RoomRejoinedPayload,
   SubmitAnswerPayload,
 } from "@quizgame/contracts";
+import { randomUUID } from "crypto";
+import type { FastifyBaseLogger } from "fastify";
+import type { Server, Socket } from "socket.io";
 import {
   HOST_RECONNECT_GRACE_MS,
   MAX_NAME_LENGTH,
@@ -20,11 +20,11 @@ import {
   ROOM_CLEANUP_DELAY_MS,
 } from "./constants";
 import { checkRateLimit, rateLimits } from "./rateLimit";
-import { isFiniteNumber, isString, normalizeQuiz } from "./validation";
 import { createRoomCode } from "./roomCode";
-import { roomStore, tokenStore } from "./store";
 import { toPublicQuestion, toSnapshot } from "./snapshots";
+import { roomStore, tokenStore } from "./store";
 import type { StoredPlayer, StoredRoom } from "./types";
+import { isFiniteNumber, isString, normalizeQuiz } from "./validation";
 
 // ── Emit helpers ──────────────────────────────────────────────────────────────
 
@@ -44,9 +44,7 @@ const emitLeaderboard = (io: Server, log: FastifyBaseLogger, room: StoredRoom) =
   }
 
   const question =
-    room.currentQuestionIndex !== null
-      ? room.quiz.questions[room.currentQuestionIndex]
-      : null;
+    room.currentQuestionIndex !== null ? room.quiz.questions[room.currentQuestionIndex] : null;
   let revealPayload: QuestionRevealPayload | null = null;
 
   if (question) {
@@ -109,7 +107,8 @@ const emitLeaderboard = (io: Server, log: FastifyBaseLogger, room: StoredRoom) =
               : Math.max(
                   0,
                   Math.round(
-                    1000 * (1 - Math.abs(player.currentAnswer.guess - question.correctNumber) / range),
+                    1000 *
+                      (1 - Math.abs(player.currentAnswer.guess - question.correctNumber) / range),
                   ),
                 );
           player.score += pointsEarned;
@@ -162,13 +161,10 @@ const emitLeaderboard = (io: Server, log: FastifyBaseLogger, room: StoredRoom) =
  */
 const emitAnswerCount = (io: Server, room: StoredRoom) => {
   const question =
-    room.currentQuestionIndex !== null
-      ? room.quiz.questions[room.currentQuestionIndex]
-      : null;
+    room.currentQuestionIndex !== null ? room.quiz.questions[room.currentQuestionIndex] : null;
   const answeredCount = question
-    ? Array.from(room.players.values()).filter(
-        (p) => p.lastAnsweredQuestionId === question.id,
-      ).length
+    ? Array.from(room.players.values()).filter((p) => p.lastAnsweredQuestionId === question.id)
+        .length
     : 0;
   const payload: AnswerCountPayload = {
     answeredCount,
@@ -283,13 +279,13 @@ const restoreSocketToRoom = (
   const currentQuestion =
     (room.status === "question" || room.status === "leaderboard") &&
     room.currentQuestionIndex !== null
-      ? room.activePublicQuestion ??
+      ? (room.activePublicQuestion ??
         toPublicQuestion(
           room.quiz.questions[room.currentQuestionIndex],
           room.currentQuestionIndex,
           room.quiz.questions.length,
           room.quiz.timeLimit,
-        )
+        ))
       : null;
 
   const payload: RoomRejoinedPayload = {
@@ -669,8 +665,7 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
         return;
       }
 
-      const nextIndex =
-        room.currentQuestionIndex === null ? 0 : room.currentQuestionIndex + 1;
+      const nextIndex = room.currentQuestionIndex === null ? 0 : room.currentQuestionIndex + 1;
 
       if (nextIndex >= room.quiz.questions.length) {
         finishGame(io, log, room);
@@ -756,10 +751,7 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
             const timeFraction = Math.min(elapsedMs / (room.quiz.timeLimit * 1000), 1);
             const basePoints = Math.max(300, Math.round(1000 - 700 * timeFraction));
             const streakBonus =
-              player.streak >= 5 ? 300
-              : player.streak >= 3 ? 150
-              : player.streak >= 2 ? 75
-              : 0;
+              player.streak >= 5 ? 300 : player.streak >= 3 ? 150 : player.streak >= 2 ? 75 : 0;
 
             pointsEarned = basePoints + streakBonus;
             player.score += pointsEarned;
@@ -776,7 +768,10 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
           break;
         }
         case "poll": {
-          if (!isString(ans.optionId) || !question.options.some((option) => option.id === ans.optionId)) {
+          if (
+            !isString(ans.optionId) ||
+            !question.options.some((option) => option.id === ans.optionId)
+          ) {
             emitError(socket, "That answer option is not valid.");
             return;
           }

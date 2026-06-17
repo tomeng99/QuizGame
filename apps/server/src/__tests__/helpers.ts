@@ -1,5 +1,5 @@
-import type { StoredPlayer, StoredRoom } from "../index";
 import type { QuizDraft, QuizQuestion, RoomSnapshot } from "@quizgame/contracts";
+import type { StoredPlayer, StoredRoom } from "../index";
 
 /** Build a minimal StoredPlayer with sensible defaults for tests. */
 export const makePlayer = (overrides: Partial<StoredPlayer> = {}): StoredPlayer => ({
@@ -53,6 +53,5 @@ export const makeRoom = (
   };
 };
 
-export { defaultMultipleChoice, defaultQuiz };
-
 export type { RoomSnapshot };
+export { defaultMultipleChoice, defaultQuiz };

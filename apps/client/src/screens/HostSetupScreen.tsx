@@ -1,10 +1,10 @@
-import { Pressable, Text, TextInput, View } from "react-native";
 import type { QuestionType, QuizDraft } from "@quizgame/contracts";
+import { Pressable, Text, TextInput, View } from "react-native";
+import { QuestionEditorCard } from "../components";
 import { IS_DEV_ENVIRONMENT } from "../config";
 import { isQuestionReady } from "../helpers";
 import { styles } from "../styles";
 import { colors } from "../theme";
-import { QuestionEditorCard } from "../components";
 import type { PendingAction } from "../types";
 
 const TIME_LIMIT_OPTIONS = [15, 20, 30, 45, 60] as const;
@@ -66,10 +66,7 @@ export function HostSetupScreen({
   onBack,
   onLoadSampleQuiz,
 }: HostSetupScreenProps) {
-  const activeQuestionIndex = Math.min(
-    selectedQuestionIndex,
-    quiz.questions.length - 1,
-  );
+  const activeQuestionIndex = Math.min(selectedQuestionIndex, quiz.questions.length - 1);
   const activeQuestion = quiz.questions[activeQuestionIndex];
   const readyQuestionCount = quiz.questions.filter(isQuestionReady).length;
 
@@ -92,8 +89,7 @@ export function HostSetupScreen({
         <View style={styles.editorSectionHeader}>
           <Text style={styles.sectionTitle}>Quiz details</Text>
           <Text style={styles.editorSectionText}>
-            Add the basics first, then move through your questions without the
-            usual clutter.
+            Add the basics first, then move through your questions without the usual clutter.
           </Text>
         </View>
         <Text style={styles.inputLabel}>Host name</Text>
@@ -159,9 +155,7 @@ export function HostSetupScreen({
             <Text style={styles.editorStatLabel}>ready</Text>
           </View>
           <View style={styles.editorStatPill}>
-            <Text style={styles.editorStatValue}>
-              {quiz.questions.length - readyQuestionCount}
-            </Text>
+            <Text style={styles.editorStatValue}>{quiz.questions.length - readyQuestionCount}</Text>
             <Text style={styles.editorStatLabel}>drafting</Text>
           </View>
         </View>
@@ -175,10 +169,7 @@ export function HostSetupScreen({
               <Pressable
                 key={question.id}
                 onPress={() => onSelectQuestion(questionIndex)}
-                style={[
-                  styles.editorQuestionTab,
-                  isSelected && styles.editorQuestionTabActive,
-                ]}
+                style={[styles.editorQuestionTab, isSelected && styles.editorQuestionTabActive]}
               >
                 <Text
                   style={[
@@ -206,9 +197,7 @@ export function HostSetupScreen({
         key={activeQuestion.id}
         canRemove={quiz.questions.length > 1}
         onTypeChange={(type) => onTypeChange(activeQuestionIndex, type)}
-        onCorrectOptionChange={(optionId) =>
-          onCorrectOptionChange(activeQuestionIndex, optionId)
-        }
+        onCorrectOptionChange={(optionId) => onCorrectOptionChange(activeQuestionIndex, optionId)}
         onOptionChange={(optionIndex, text) =>
           onOptionChange(activeQuestionIndex, optionIndex, text)
         }
@@ -218,19 +207,13 @@ export function HostSetupScreen({
         onCorrectNumberChange={(value) =>
           onNumberFieldChange(activeQuestionIndex, "correctNumber", value)
         }
-        onMinValueChange={(value) =>
-          onNumberFieldChange(activeQuestionIndex, "minValue", value)
-        }
-        onMaxValueChange={(value) =>
-          onNumberFieldChange(activeQuestionIndex, "maxValue", value)
-        }
+        onMinValueChange={(value) => onNumberFieldChange(activeQuestionIndex, "minValue", value)}
+        onMaxValueChange={(value) => onNumberFieldChange(activeQuestionIndex, "maxValue", value)}
         onRankingItemChange={(itemIndex, text) =>
           onRankingItemChange(activeQuestionIndex, itemIndex, text)
         }
         onAddRankingItem={() => onAddRankingItem(activeQuestionIndex)}
-        onRemoveRankingItem={(itemIndex) =>
-          onRemoveRankingItem(activeQuestionIndex, itemIndex)
-        }
+        onRemoveRankingItem={(itemIndex) => onRemoveRankingItem(activeQuestionIndex, itemIndex)}
         onPromptChange={(prompt) => onPromptChange(activeQuestionIndex, prompt)}
         onRemove={() => onRemoveQuestion(activeQuestion.id)}
         question={activeQuestion}
@@ -255,22 +238,15 @@ export function HostSetupScreen({
       <Pressable
         disabled={!canCreateRoom}
         onPress={onCreateRoom}
-        style={[
-          styles.bigButton,
-          !canCreateRoom && styles.disabledButton,
-        ]}
+        style={[styles.bigButton, !canCreateRoom && styles.disabledButton]}
       >
         <Text style={styles.bigButtonText}>
-          {pendingAction === "create-room"
-            ? "creating..."
-            : "Go live"}
+          {pendingAction === "create-room" ? "creating..." : "Go live"}
         </Text>
       </Pressable>
 
       <Pressable onPress={onBack} style={styles.backLink}>
-        <Text style={styles.backLinkText}>
-          {"\u2190"} Join a game instead
-        </Text>
+        <Text style={styles.backLinkText}>{"\u2190"} Join a game instead</Text>
       </Pressable>
     </>
   );

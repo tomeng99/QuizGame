@@ -1,11 +1,10 @@
 import { StatusBar } from "expo-status-bar";
 import { useMemo } from "react";
 import { Platform, SafeAreaView, ScrollView, Text, View } from "react-native";
-
+import { FeedbackBanner, StatusChip } from "./src/components";
 import { getJoinUrl } from "./src/config";
 import { useGameActions, useGameState, useQuizEditor } from "./src/hooks";
-import { FeedbackBanner, StatusChip } from "./src/components";
-import { JoinCodeScreen, JoinNameScreen, HostSetupScreen, GameScreen } from "./src/screens";
+import { GameScreen, HostSetupScreen, JoinCodeScreen, JoinNameScreen } from "./src/screens";
 import { styles } from "./src/styles";
 
 export default function App() {
@@ -13,10 +12,7 @@ export default function App() {
   const editor = useQuizEditor();
   const actions = useGameActions(game, editor);
 
-  const joinUrl = useMemo(
-    () => (game.room ? getJoinUrl(game.room.roomCode) : null),
-    [game.room],
-  );
+  const joinUrl = useMemo(() => (game.room ? getJoinUrl(game.room.roomCode) : null), [game.room]);
 
   const openPlayerTab = () => {
     if (!joinUrl || Platform.OS !== "web" || typeof window === "undefined") {
@@ -28,10 +24,7 @@ export default function App() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {game.screen !== "game" && (
           <View style={styles.headerContainer}>
             <Text style={styles.title}>QuizGame</Text>

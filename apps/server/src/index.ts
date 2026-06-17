@@ -1,25 +1,25 @@
-import Fastify from "fastify";
 import cors from "@fastify/cors";
+import Fastify from "fastify";
 import { Server } from "socket.io";
 
 import { registerRealtimeHandlers } from "./events";
 import { roomStore } from "./store";
 
-// ── Re-exports for testability ────────────────────────────────────────────────
-export { normalizeQuestion, normalizeQuiz, isString, isFiniteNumber } from "./validation";
-export { checkRateLimit, rateLimits } from "./rateLimit";
-export { randomCode, createRoomCode } from "./roomCode";
-export { toLeaderboard, toPlayers, toSnapshot, toPublicQuestion } from "./snapshots";
 export {
-  MAX_PLAYERS_PER_ROOM,
-  MAX_QUESTIONS,
-  MAX_PROMPT_LENGTH,
-  MAX_OPTION_TEXT_LENGTH,
-  MAX_NAME_LENGTH,
   HOST_RECONNECT_GRACE_MS,
+  MAX_NAME_LENGTH,
+  MAX_OPTION_TEXT_LENGTH,
+  MAX_PLAYERS_PER_ROOM,
+  MAX_PROMPT_LENGTH,
+  MAX_QUESTIONS,
   ROOM_CLEANUP_DELAY_MS,
 } from "./constants";
+export { checkRateLimit, rateLimits } from "./rateLimit";
+export { createRoomCode, randomCode } from "./roomCode";
+export { toLeaderboard, toPlayers, toPublicQuestion, toSnapshot } from "./snapshots";
 export type { StoredPlayer, StoredRoom } from "./types";
+// ── Re-exports for testability ────────────────────────────────────────────────
+export { isFiniteNumber, isString, normalizeQuestion, normalizeQuiz } from "./validation";
 
 // ── Origin helpers ─────────────────────────────────────────────────────────────
 
@@ -56,10 +56,7 @@ const main = async () => {
   app.get("/health", async () => ({
     ok: true,
     rooms: roomStore.getRoomCount(),
-    players: Array.from(roomStore.getAllRooms()).reduce(
-      (sum, room) => sum + room.players.size,
-      0,
-    ),
+    players: Array.from(roomStore.getAllRooms()).reduce((sum, room) => sum + room.players.size, 0),
   }));
 
   io = new Server(app.server, {

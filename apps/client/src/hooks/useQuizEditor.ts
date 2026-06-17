@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   createEmptyNumberQuestion,
   createEmptyPollQuestion,
@@ -8,6 +7,7 @@ import {
   type QuestionType,
   type QuizDraft,
 } from "@quizgame/contracts";
+import { useState } from "react";
 import { SAMPLE_HOST_NAME, SAMPLE_QUIZ } from "../devSampleQuiz";
 
 const QUESTION_ID_PATTERN = /^question-(\d+)$/;
@@ -121,19 +121,11 @@ export function useQuizEditor(): QuizEditor {
     }));
   };
 
-  const updateQuestionOption = (
-    questionIndex: number,
-    optionIndex: number,
-    text: string,
-  ) => {
+  const updateQuestionOption = (questionIndex: number, optionIndex: number, text: string) => {
     setQuiz((current) => updateOptionText(current, questionIndex, optionIndex, text));
   };
 
-  const updatePollOption = (
-    questionIndex: number,
-    optionIndex: number,
-    text: string,
-  ) => {
+  const updatePollOption = (questionIndex: number, optionIndex: number, text: string) => {
     setQuiz((current) => updateOptionText(current, questionIndex, optionIndex, text));
   };
 
@@ -152,11 +144,7 @@ export function useQuizEditor(): QuizEditor {
     }));
   };
 
-  const updateRankingItem = (
-    questionIndex: number,
-    itemIndex: number,
-    text: string,
-  ) => {
+  const updateRankingItem = (questionIndex: number, itemIndex: number, text: string) => {
     setQuiz((current) => ({
       ...current,
       questions: current.questions.map((question, index) =>
@@ -230,17 +218,12 @@ export function useQuizEditor(): QuizEditor {
     setSelectedQuestionIndex(quiz.questions.length);
     setQuiz((current) => ({
       ...current,
-      questions: [
-        ...current.questions,
-        createEmptyQuestion(getNextQuestionSeed(current)),
-      ],
+      questions: [...current.questions, createEmptyQuestion(getNextQuestionSeed(current))],
     }));
   };
 
   const removeQuestion = (questionId: string) => {
-    const removedIndex = quiz.questions.findIndex(
-      (question) => question.id === questionId,
-    );
+    const removedIndex = quiz.questions.findIndex((question) => question.id === questionId);
 
     setQuiz((current) => {
       if (current.questions.length === 1) {
@@ -249,9 +232,7 @@ export function useQuizEditor(): QuizEditor {
 
       return {
         ...current,
-        questions: current.questions.filter(
-          (question) => question.id !== questionId,
-        ),
+        questions: current.questions.filter((question) => question.id !== questionId),
       };
     });
 

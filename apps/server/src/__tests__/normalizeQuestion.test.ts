@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  MAX_OPTION_TEXT_LENGTH,
-  MAX_PROMPT_LENGTH,
-  normalizeQuestion,
-} from "../index";
+import { MAX_OPTION_TEXT_LENGTH, MAX_PROMPT_LENGTH, normalizeQuestion } from "../index";
 
 describe("normalizeQuestion", () => {
   describe("multiple-choice", () => {
@@ -48,15 +44,11 @@ describe("normalizeQuestion", () => {
     });
 
     it("returns null when fewer than 2 valid options", () => {
-      expect(
-        normalizeQuestion({ prompt: "q", options: [{ text: "only" }] }, 0),
-      ).toBeNull();
+      expect(normalizeQuestion({ prompt: "q", options: [{ text: "only" }] }, 0)).toBeNull();
     });
 
     it("returns null when options is not an array", () => {
-      expect(
-        normalizeQuestion({ prompt: "q", options: "nope" }, 0),
-      ).toBeNull();
+      expect(normalizeQuestion({ prompt: "q", options: "nope" }, 0)).toBeNull();
     });
 
     it("caps options at 10", () => {
@@ -92,7 +84,10 @@ describe("normalizeQuestion", () => {
       const result = normalizeQuestion(
         {
           prompt: "q",
-          options: [{ id: "a", text: "x" }, { id: "b", text: "y" }],
+          options: [
+            { id: "a", text: "x" },
+            { id: "b", text: "y" },
+          ],
           correctOptionId: "does-not-exist",
         },
         0,
@@ -103,7 +98,13 @@ describe("normalizeQuestion", () => {
 
     it("falls back to first option id when correctOptionId is missing", () => {
       const result = normalizeQuestion(
-        { prompt: "q", options: [{ id: "a", text: "x" }, { id: "b", text: "y" }] },
+        {
+          prompt: "q",
+          options: [
+            { id: "a", text: "x" },
+            { id: "b", text: "y" },
+          ],
+        },
         0,
       );
       expect(result).not.toBeNull();
@@ -111,10 +112,7 @@ describe("normalizeQuestion", () => {
     });
 
     it("auto-generates question and option ids when absent", () => {
-      const result = normalizeQuestion(
-        { prompt: "q", options: [{ text: "x" }, { text: "y" }] },
-        2,
-      );
+      const result = normalizeQuestion({ prompt: "q", options: [{ text: "x" }, { text: "y" }] }, 2);
       expect(result).not.toBeNull();
       const r = result as { id: string; options: { id: string }[] };
       expect(r.id).toBe("question-3");
@@ -127,7 +125,10 @@ describe("normalizeQuestion", () => {
         {
           id: "custom-q",
           prompt: "q",
-          options: [{ id: "opt-a", text: "x" }, { id: "opt-b", text: "y" }],
+          options: [
+            { id: "opt-a", text: "x" },
+            { id: "opt-b", text: "y" },
+          ],
           correctOptionId: "opt-b",
         },
         0,

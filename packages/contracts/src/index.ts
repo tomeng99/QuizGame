@@ -44,11 +44,7 @@ export interface RankingQuestion {
   correctOrder: string[];
 }
 
-export type QuizQuestion =
-  | MultipleChoiceQuestion
-  | PollQuestion
-  | NumberQuestion
-  | RankingQuestion;
+export type QuizQuestion = MultipleChoiceQuestion | PollQuestion | NumberQuestion | RankingQuestion;
 
 export interface QuizDraft {
   title: string;

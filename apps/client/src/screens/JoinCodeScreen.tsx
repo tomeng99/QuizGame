@@ -24,9 +24,7 @@ export function JoinCodeScreen({
     <>
       <View style={styles.heroCard}>
         <Text style={styles.heroTitle}>Enter Game Code</Text>
-        <Text style={styles.heroSubtitle}>
-          Ask your host for the 6-character room code
-        </Text>
+        <Text style={styles.heroSubtitle}>Ask your host for the 6-character room code</Text>
         <TextInput
           autoCapitalize="characters"
           autoCorrect={false}
@@ -40,23 +38,16 @@ export function JoinCodeScreen({
         <Pressable
           disabled={!canCheckRoom}
           onPress={onCheckRoom}
-          style={[
-            styles.bigButton,
-            !canCheckRoom && styles.disabledButton,
-          ]}
+          style={[styles.bigButton, !canCheckRoom && styles.disabledButton]}
         >
           <Text style={styles.bigButtonText}>
-            {pendingAction === "check-room"
-              ? "looking..."
-              : "Join game"}
+            {pendingAction === "check-room" ? "looking..." : "Join game"}
           </Text>
         </Pressable>
       </View>
 
       <Pressable onPress={onHostPress} style={styles.hostLink}>
-        <Text style={styles.hostLinkText}>
-          Want to host a quiz instead?
-        </Text>
+        <Text style={styles.hostLinkText}>Want to host a quiz instead?</Text>
       </Pressable>
     </>
   );

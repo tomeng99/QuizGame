@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-import { io, type Socket } from "socket.io-client";
 import type {
   AnswerAcceptedPayload,
   AnswerCountPayload,
@@ -11,13 +9,10 @@ import type {
   RoomRejoinedPayload,
   RoomSnapshot,
 } from "@quizgame/contracts";
+import { useEffect } from "react";
+import { io, type Socket } from "socket.io-client";
 import { API_BASE } from "../config";
-import type {
-  ConnectionState,
-  FeedbackState,
-  PendingAction,
-  Screen,
-} from "../types";
+import type { ConnectionState, FeedbackState, PendingAction, Screen } from "../types";
 import type { UseSessionStorage } from "./useSessionStorage";
 
 /**
@@ -111,7 +106,7 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
       // Determine role: use in-memory ref first, fall back to stored session role.
       const role: "host" | "player" | null = isHostRef.current
         ? "host"
-        : storedSession?.role ?? (inMemoryToken ? null : null);
+        : (storedSession?.role ?? (inMemoryToken ? null : null));
 
       if (token && role) {
         // Restore tokenRef immediately (needed for page-refresh case where ref is null).
@@ -225,9 +220,7 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
           ? payload.room.leaderboard.find((e) => e.playerId === restoredToken)
           : null;
         setHasAnsweredCurrentQuestion(selfEntry?.answeredCurrentQuestion ?? false);
-        setAnsweredCount(
-          payload.room.leaderboard.filter((e) => e.answeredCurrentQuestion).length,
-        );
+        setAnsweredCount(payload.room.leaderboard.filter((e) => e.answeredCurrentQuestion).length);
       } else {
         setCurrentQuestion(null);
         setNumberGuess(null);
@@ -313,9 +306,7 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
       const winner = snapshot.leaderboard[0];
       setFeedback({
         tone: "success",
-        message: winner
-          ? `${winner.name} wins with ${winner.score} points!`
-          : "Quiz complete!",
+        message: winner ? `${winner.name} wins with ${winner.score} points!` : "Quiz complete!",
       });
     });
 

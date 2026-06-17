@@ -1,9 +1,14 @@
-import type { PublicQuestion, QuizDraft, RoomSnapshot, SubmitAnswerPayload } from "@quizgame/contracts";
+import type {
+  PublicQuestion,
+  QuizDraft,
+  RoomSnapshot,
+  SubmitAnswerPayload,
+} from "@quizgame/contracts";
 
 // ── Domain types ───────────────────────────────────────────────────────────────
 
 export interface StoredPlayer {
-  id: string;       // stable UUID — the reconnect token for this player
+  id: string; // stable UUID — the reconnect token for this player
   socketId: string; // current socket.id (changes on reconnect)
   name: string;
   score: number;
@@ -20,7 +25,7 @@ export interface StoredPlayer {
 export interface StoredRoom {
   code: string;
   hostSocketId: string | null; // null while host grace-period timer is running
-  hostToken: string;           // stable UUID — the reconnect token for the host
+  hostToken: string; // stable UUID — the reconnect token for the host
   hostName: string;
   quiz: QuizDraft;
   status: RoomSnapshot["status"];
