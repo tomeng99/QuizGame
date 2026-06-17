@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import QRCodeSVG from "react-native-qrcode-svg";
 import type {
   AnswerAcceptedPayload,
   PublicQuestion,
@@ -68,7 +69,6 @@ export function GameScreen({
   onOpenPlayerTab,
 }: GameScreenProps) {
   const winner = room.leaderboard[0] ?? null;
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   useEffect(() => {
@@ -103,42 +103,6 @@ export function GameScreen({
       : timerFraction > 0.25
         ? colors.optionOrange
         : colors.errorBright;
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!joinUrl) {
-      setQrCodeDataUrl(null);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const generateQrCode = async () => {
-      const { default: QRCode } = await import("qrcode");
-      const nextQrCodeDataUrl = await QRCode.toDataURL(joinUrl, {
-        errorCorrectionLevel: "M",
-        margin: 1,
-        width: 256,
-      });
-
-      if (!cancelled) {
-        setQrCodeDataUrl(nextQrCodeDataUrl);
-      }
-    };
-
-    void generateQrCode().catch((error: unknown) => {
-      console.error("Failed to generate room QR code.", error);
-
-      if (!cancelled) {
-        setQrCodeDataUrl(null);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [joinUrl]);
 
   const canSubmitAnswer = (() => {
     if (!currentQuestion || hasAnsweredCurrentQuestion || pendingAction !== null) {
@@ -292,10 +256,10 @@ export function GameScreen({
           {room.status === "lobby" && (
             <>
               <Text style={styles.controlsHint}>Scan to join instantly</Text>
-              {qrCodeDataUrl && (
+              {joinUrl && (
                 <View style={styles.qrPanel}>
                   <View style={styles.qrFrame}>
-                    <Image source={{ uri: qrCodeDataUrl }} style={styles.qrImage} />
+                    <QRCodeSVG value={joinUrl} size={256} />
                   </View>
                   <Text style={styles.qrCaption}>
                     Players can scan this with their phone and land straight on
