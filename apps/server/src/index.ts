@@ -20,50 +20,23 @@ import {
   RoomSnapshot,
   SubmitAnswerPayload,
 } from "@quizgame/contracts";
-
-// ── Domain types ───────────────────────────────────────────────────────────────
-
-interface StoredPlayer {
-  id: string;       // stable UUID — the reconnect token for this player
-  socketId: string; // current socket.id (changes on reconnect)
-  name: string;
-  score: number;
-  connected: boolean;
-  lastAnsweredQuestionId: string | null;
-  /** Consecutive correct answers in a row. Resets to 0 on a wrong answer. */
-  streak: number;
-  /** Snapshot of score at the start of the current question round. */
-  scoreBeforeCurrentQuestion: number;
-  /** The player's answer for the current question (for pending-scoring types). */
-  currentAnswer: SubmitAnswerPayload | null;
-}
-
-interface StoredRoom {
-  code: string;
-  hostSocketId: string | null; // null while host grace-period timer is running
-  hostToken: string;           // stable UUID — the reconnect token for the host
-  hostName: string;
-  quiz: QuizDraft;
-  status: RoomSnapshot["status"];
-  currentQuestionIndex: number | null;
-  questionStartedAt: number | null;
-  activePublicQuestion: PublicQuestion | null;
-  players: Map<string, StoredPlayer>; // keyed by player.id (UUID)
-  hostCloseTimer: ReturnType<typeof setTimeout> | null;
-  cleanupTimer: ReturnType<typeof setTimeout> | null;
-  /** Auto-advance timer: fires emitLeaderboard after the question time limit expires. */
-  questionAutoTimer: ReturnType<typeof setTimeout> | null;
-}
+import {
+  type RoomStore,
+  type StoredRoom,
+  type StoredPlayer,
+  InMemoryRoomStore,
+} from "./roomStore";
+import { type TokenStore, InMemoryTokenStore } from "./tokenStore";
 
 // ── App setup ──────────────────────────────────────────────────────────────────
 
 const app = Fastify({ logger: true });
 
-/** Active rooms keyed by room code. */
-const rooms = new Map<string, StoredRoom>();
+/** Active rooms, abstracted behind the RoomStore interface for future Redis support. */
+const roomStore: RoomStore = new InMemoryRoomStore();
 
-/** Maps a stable token (player/host UUID) to its room and role, enabling reconnects. */
-const tokenStore = new Map<string, { roomCode: string; role: "host" | "player" }>();
+/** Reconnect tokens, abstracted behind the TokenStore interface for future Redis support. */
+const tokenStore: TokenStore = new InMemoryTokenStore();
 
 /** Per-socket sliding-window rate limits: socketId → event → { count, windowStart }. */
 const rateLimits = new Map<string, Map<string, { count: number; windowStart: number }>>();
@@ -139,7 +112,7 @@ const randomCode = () => {
 
 const createRoomCode = () => {
   let code = randomCode();
-  while (rooms.has(code)) {
+  while (roomStore.hasRoom(code)) {
     code = randomCode();
   }
   return code;
@@ -580,11 +553,11 @@ const deleteRoom = (room: StoredRoom) => {
     clearTimeout(room.questionAutoTimer);
     room.questionAutoTimer = null;
   }
-  tokenStore.delete(room.hostToken);
+  tokenStore.deleteToken(room.hostToken);
   for (const playerId of room.players.keys()) {
-    tokenStore.delete(playerId);
+    tokenStore.deleteToken(playerId);
   }
-  rooms.delete(room.code);
+  roomStore.deleteRoom(room.code);
   app.log.info({ roomCode: room.code }, "room deleted");
 };
 
@@ -691,8 +664,8 @@ const registerRealtimeHandlers = () => {
         questionAutoTimer: null,
       };
 
-      rooms.set(code, room);
-      tokenStore.set(hostToken, { roomCode: code, role: "host" });
+      roomStore.setRoom(code, room);
+      tokenStore.setToken(hostToken, { roomCode: code, role: "host" });
       socket.data.roomCode = code;
       socket.data.role = "host";
       socket.data.token = hostToken;
@@ -727,7 +700,7 @@ const registerRealtimeHandlers = () => {
       }
 
       const roomCode = p.roomCode.trim().toUpperCase();
-      const room = rooms.get(roomCode);
+      const room = roomStore.getRoom(roomCode);
 
       if (!room) {
         emitError(socket, "Room not found. Check the code and try again.");
@@ -775,7 +748,7 @@ const registerRealtimeHandlers = () => {
       }
 
       const roomCode = p.roomCode.trim().toUpperCase();
-      const room = rooms.get(roomCode);
+      const room = roomStore.getRoom(roomCode);
 
       if (!room) {
         emitError(socket, "Room not found. Check the code and try again.");
@@ -827,7 +800,7 @@ const registerRealtimeHandlers = () => {
       };
 
       room.players.set(playerId, player);
-      tokenStore.set(playerId, { roomCode: room.code, role: "player" });
+      tokenStore.setToken(playerId, { roomCode: room.code, role: "player" });
       socket.data.roomCode = room.code;
       socket.data.role = "player";
       socket.data.token = playerId;
@@ -857,14 +830,14 @@ const registerRealtimeHandlers = () => {
         return;
       }
 
-      const entry = tokenStore.get(p.token);
+      const entry = tokenStore.getToken(p.token);
 
       if (!entry || entry.role !== "player") {
         emitError(socket, "Session not found. Please re-join the room.");
         return;
       }
 
-      const room = rooms.get(entry.roomCode);
+      const room = roomStore.getRoom(entry.roomCode);
 
       if (!room) {
         emitError(socket, "The room no longer exists.");
@@ -901,14 +874,14 @@ const registerRealtimeHandlers = () => {
         return;
       }
 
-      const entry = tokenStore.get(p.token);
+      const entry = tokenStore.getToken(p.token);
 
       if (!entry || entry.role !== "host") {
         emitError(socket, "Host session not found. The room may have closed.");
         return;
       }
 
-      const room = rooms.get(entry.roomCode);
+      const room = roomStore.getRoom(entry.roomCode);
 
       if (!room) {
         emitError(socket, "The room no longer exists.");
@@ -940,7 +913,7 @@ const registerRealtimeHandlers = () => {
         return;
       }
 
-      const room = rooms.get(roomCode.toUpperCase());
+      const room = roomStore.getRoom(roomCode.toUpperCase());
 
       if (!room || room.hostSocketId !== socket.id) {
         emitError(socket, "Only the host can start the game.");
@@ -969,7 +942,7 @@ const registerRealtimeHandlers = () => {
         return;
       }
 
-      const room = rooms.get(roomCode.toUpperCase());
+      const room = roomStore.getRoom(roomCode.toUpperCase());
 
       if (!room || room.hostSocketId !== socket.id) {
         emitError(socket, "Only the host can reveal the leaderboard.");
@@ -992,7 +965,7 @@ const registerRealtimeHandlers = () => {
         return;
       }
 
-      const room = rooms.get(roomCode.toUpperCase());
+      const room = roomStore.getRoom(roomCode.toUpperCase());
 
       if (!room || room.hostSocketId !== socket.id) {
         emitError(socket, "Only the host can advance the game.");
@@ -1041,7 +1014,7 @@ const registerRealtimeHandlers = () => {
         return;
       }
 
-      const room = rooms.get(ans.roomCode.toUpperCase());
+      const room = roomStore.getRoom(ans.roomCode.toUpperCase());
 
       if (!room || room.status !== "question" || room.currentQuestionIndex === null) {
         emitError(socket, "There is no active question right now.");
@@ -1220,7 +1193,7 @@ const registerRealtimeHandlers = () => {
 
       if (!roomCode) return;
 
-      const room = rooms.get(roomCode);
+      const room = roomStore.getRoom(roomCode);
       if (!room) return;
 
       if (role === "host") {
@@ -1229,7 +1202,7 @@ const registerRealtimeHandlers = () => {
         app.log.info({ roomCode }, "host disconnected — grace period started");
 
         room.hostCloseTimer = setTimeout(() => {
-          const activeRoom = rooms.get(roomCode);
+          const activeRoom = roomStore.getRoom(roomCode);
           if (activeRoom && activeRoom.hostSocketId === null) {
             app.log.info({ roomCode }, "host grace period expired — closing room");
             emitRoomClosed(activeRoom, "The host disconnected. This room is now closed.");
@@ -1268,8 +1241,8 @@ const main = async () => {
 
   app.get("/health", async () => ({
     ok: true,
-    rooms: rooms.size,
-    players: Array.from(rooms.values()).reduce((sum, room) => sum + room.players.size, 0),
+    rooms: roomStore.getRoomCount(),
+    players: Array.from(roomStore.getAllRooms()).reduce((sum, room) => sum + room.players.size, 0),
   }));
 
   io = new Server(app.server, {
