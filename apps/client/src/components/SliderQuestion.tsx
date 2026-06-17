@@ -1,6 +1,6 @@
 import { useState } from "react";
+import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
 import { Text, View } from "react-native";
-import type { LayoutChangeEvent, GestureResponderEvent } from "react-native";
 import { styles } from "../styles";
 
 interface SliderQuestionProps {
@@ -60,9 +60,7 @@ export function SliderQuestion({
         <View style={[styles.sliderTrackFill, { width: `${progress * 100}%` as `${number}%` }]} />
         <View style={[styles.sliderThumb, { left: `${progress * 100}%` as `${number}%` }]} />
       </View>
-      <Text style={styles.sliderQuestionHint}>
-        Drag or tap to choose your closest guess.
-      </Text>
+      <Text style={styles.sliderQuestionHint}>Drag or tap to choose your closest guess.</Text>
     </View>
   );
 }

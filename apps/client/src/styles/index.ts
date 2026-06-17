@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { colors, spacing, fontSizes, fontWeights, radii, maxContentWidth } from "../theme";
+import { colors, fontSizes, fontWeights, maxContentWidth, radii, spacing } from "../theme";
 
 /**
  * Shared styles for the entire app.

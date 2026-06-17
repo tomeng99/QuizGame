@@ -1,8 +1,8 @@
-import { Pressable, Text, TextInput, View } from "react-native";
 import type { QuestionType, QuizQuestion } from "@quizgame/contracts";
+import { Pressable, Text, TextInput, View } from "react-native";
+import { OPTION_THEMES } from "../constants";
 import { styles } from "../styles";
 import { colors } from "../theme";
-import { OPTION_THEMES } from "../constants";
 
 const QUESTION_TYPE_OPTIONS: Array<{ label: string; value: QuestionType }> = [
   { label: "Multiple Choice", value: "multiple-choice" },
@@ -78,10 +78,8 @@ export function QuestionEditorCard({
               style={[
                 styles.editorOptionCard,
                 {
-                  borderColor:
-                    isCorrect ? colors.successBright : `${theme.bg}55`,
-                  backgroundColor:
-                    isCorrect ? `${colors.successBright}12` : colors.bgInput,
+                  borderColor: isCorrect ? colors.successBright : `${theme.bg}55`,
+                  backgroundColor: isCorrect ? `${colors.successBright}12` : colors.bgInput,
                 },
               ]}
             >
@@ -105,11 +103,7 @@ export function QuestionEditorCard({
                       ? onOptionChange(optionIndex, value)
                       : onPollOptionChange(optionIndex, value)
                   }
-                  placeholder={
-                    optionIndex === 0
-                      ? "Option 1"
-                      : `Option ${optionIndex + 1}`
-                  }
+                  placeholder={optionIndex === 0 ? "Option 1" : `Option ${optionIndex + 1}`}
                   placeholderTextColor={colors.textMuted}
                   style={styles.editorOptionInputText}
                   value={option.text}
@@ -117,10 +111,7 @@ export function QuestionEditorCard({
                 {showCorrectToggle ? (
                   <Pressable
                     onPress={() => onCorrectOptionChange(option.id)}
-                    style={[
-                      styles.correctToggle,
-                      isCorrect && styles.correctToggleActive,
-                    ]}
+                    style={[styles.correctToggle, isCorrect && styles.correctToggleActive]}
                   >
                     <Text
                       style={[
@@ -145,14 +136,10 @@ export function QuestionEditorCard({
       <View style={styles.editorQuestionHeader}>
         <View style={styles.editorQuestionHeading}>
           <View style={styles.editorQuestionBadge}>
-            <Text style={styles.editorQuestionBadgeText}>
-              Q{questionIndex + 1}
-            </Text>
+            <Text style={styles.editorQuestionBadgeText}>Q{questionIndex + 1}</Text>
           </View>
           <View style={styles.editorQuestionHeaderText}>
-            <Text style={styles.editorQuestionTitle}>
-              Question {questionIndex + 1}
-            </Text>
+            <Text style={styles.editorQuestionTitle}>Question {questionIndex + 1}</Text>
             <Text style={styles.editorQuestionDescription}>
               Keep it short, clear, and easy to answer on a phone.
             </Text>
@@ -173,16 +160,10 @@ export function QuestionEditorCard({
             <Pressable
               key={option.value}
               onPress={() => onTypeChange(option.value)}
-              style={[
-                styles.questionTypePill,
-                isActive && styles.questionTypePillActive,
-              ]}
+              style={[styles.questionTypePill, isActive && styles.questionTypePillActive]}
             >
               <Text
-                style={[
-                  styles.questionTypePillText,
-                  isActive && styles.questionTypePillTextActive,
-                ]}
+                style={[styles.questionTypePillText, isActive && styles.questionTypePillTextActive]}
               >
                 {option.label}
               </Text>
@@ -246,9 +227,7 @@ export function QuestionEditorCard({
         <>
           <View style={styles.editorOptionsHeader}>
             <Text style={styles.inputLabel}>Ranking items</Text>
-            <Text style={styles.editorOptionHint}>
-              Players will see these in scrambled order
-            </Text>
+            <Text style={styles.editorOptionHint}>Players will see these in scrambled order</Text>
           </View>
           {question.items.map((item, itemIndex) => (
             <View key={item.id} style={styles.rankingEditorItemCard}>

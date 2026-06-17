@@ -1,12 +1,11 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo } from "react";
 import { Platform, SafeAreaView, ScrollView, Text, View } from "react-native";
-
-import { getJoinUrl } from "./src/config";
-import { useGameState, useQuizEditor } from "./src/hooks";
 import { FeedbackBanner, StatusChip } from "./src/components";
-import { JoinCodeScreen, JoinNameScreen, HostSetupScreen, GameScreen } from "./src/screens";
+import { getJoinUrl } from "./src/config";
 import { validateQuiz } from "./src/helpers";
+import { useGameState, useQuizEditor } from "./src/hooks";
+import { GameScreen, HostSetupScreen, JoinCodeScreen, JoinNameScreen } from "./src/screens";
 import { styles } from "./src/styles";
 
 export default function App() {
@@ -14,10 +13,7 @@ export default function App() {
   const editor = useQuizEditor();
 
   const quizIssues = useMemo(() => validateQuiz(editor.quiz), [editor.quiz]);
-  const joinUrl = useMemo(
-    () => (game.room ? getJoinUrl(game.room.roomCode) : null),
-    [game.room],
-  );
+  const joinUrl = useMemo(() => (game.room ? getJoinUrl(game.room.roomCode) : null), [game.room]);
 
   const checkRoom = (roomCode = game.roomCodeInput) => {
     const normalizedRoomCode = roomCode.trim().toUpperCase();
@@ -49,11 +45,7 @@ export default function App() {
   };
 
   const createRoom = () => {
-    if (
-      game.connectionState !== "connected" ||
-      !editor.hostName.trim() ||
-      quizIssues.length > 0
-    ) {
+    if (game.connectionState !== "connected" || !editor.hostName.trim() || quizIssues.length > 0) {
       return;
     }
     game.setPendingAction("create-room");
@@ -80,8 +72,7 @@ export default function App() {
 
   const nextQuestion = () => {
     if (!game.room) return;
-    const isLast =
-      game.room.currentQuestionIndex === game.room.totalQuestions - 1;
+    const isLast = game.room.currentQuestionIndex === game.room.totalQuestions - 1;
     game.setPendingAction("next-question");
     game.setFeedback({
       tone: "info",
@@ -200,10 +191,7 @@ export default function App() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {game.screen !== "game" && (
           <View style={styles.headerContainer}>
             <Text style={styles.title}>QuizGame</Text>

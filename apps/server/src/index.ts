@@ -1,8 +1,5 @@
-import { randomUUID } from "crypto";
-import Fastify from "fastify";
 import cors from "@fastify/cors";
-import { Server, type Socket } from "socket.io";
-import {
+import type {
   AnswerAcceptedPayload,
   AnswerCountPayload,
   CheckRoomPayload,
@@ -20,11 +17,14 @@ import {
   RoomSnapshot,
   SubmitAnswerPayload,
 } from "@quizgame/contracts";
+import { randomUUID } from "crypto";
+import Fastify from "fastify";
+import { Server, type Socket } from "socket.io";
 
 // ── Domain types ───────────────────────────────────────────────────────────────
 
 interface StoredPlayer {
-  id: string;       // stable UUID — the reconnect token for this player
+  id: string; // stable UUID — the reconnect token for this player
   socketId: string; // current socket.id (changes on reconnect)
   name: string;
   score: number;
@@ -41,7 +41,7 @@ interface StoredPlayer {
 interface StoredRoom {
   code: string;
   hostSocketId: string | null; // null while host grace-period timer is running
-  hostToken: string;           // stable UUID — the reconnect token for the host
+  hostToken: string; // stable UUID — the reconnect token for the host
   hostName: string;
   quiz: QuizDraft;
   status: RoomSnapshot["status"];
@@ -77,7 +77,7 @@ const MAX_QUESTIONS = 50;
 const MAX_PROMPT_LENGTH = 500;
 const MAX_OPTION_TEXT_LENGTH = 200;
 const MAX_NAME_LENGTH = 50;
-const HOST_RECONNECT_GRACE_MS = 60_000;  // 60 s before closing a host-less room
+const HOST_RECONNECT_GRACE_MS = 60_000; // 60 s before closing a host-less room
 const ROOM_CLEANUP_DELAY_MS = 30 * 60_000; // 30 min after game finishes
 
 // ── Origin helpers ─────────────────────────────────────────────────────────────
@@ -153,9 +153,8 @@ const normalizeQuestion = (question: unknown, index: number): QuizQuestion | nul
 
   const prompt = isString(q.prompt) ? q.prompt.trim().slice(0, MAX_PROMPT_LENGTH) : "";
   const id = isString(q.id) && q.id ? q.id : `question-${index + 1}`;
-  const type = q.type === "poll" || q.type === "number" || q.type === "ranking"
-    ? q.type
-    : "multiple-choice";
+  const type =
+    q.type === "poll" || q.type === "number" || q.type === "ranking" ? q.type : "multiple-choice";
 
   if (!prompt) return null;
 
@@ -186,10 +185,9 @@ const normalizeQuestion = (question: unknown, index: number): QuizQuestion | nul
       };
     }
 
-    const correctOptionId =
-      options.some((option) => option.id === q.correctOptionId)
-        ? (q.correctOptionId as string)
-        : options[0].id;
+    const correctOptionId = options.some((option) => option.id === q.correctOptionId)
+      ? (q.correctOptionId as string)
+      : options[0].id;
 
     return {
       id,
@@ -319,7 +317,7 @@ const toSnapshot = (room: StoredRoom): RoomSnapshot => ({
   leaderboard: toLeaderboard(room),
 });
 
-const shuffleItems = <T,>(items: T[]): T[] => {
+const shuffleItems = <T>(items: T[]): T[] => {
   const next = [...items];
 
   for (let index = next.length - 1; index > 0; index -= 1) {
@@ -391,9 +389,7 @@ const emitLeaderboard = (room: StoredRoom) => {
   }
 
   const question =
-    room.currentQuestionIndex !== null
-      ? room.quiz.questions[room.currentQuestionIndex]
-      : null;
+    room.currentQuestionIndex !== null ? room.quiz.questions[room.currentQuestionIndex] : null;
   let revealPayload: QuestionRevealPayload | null = null;
 
   if (question) {
@@ -456,7 +452,8 @@ const emitLeaderboard = (room: StoredRoom) => {
               : Math.max(
                   0,
                   Math.round(
-                    1000 * (1 - Math.abs(player.currentAnswer.guess - question.correctNumber) / range),
+                    1000 *
+                      (1 - Math.abs(player.currentAnswer.guess - question.correctNumber) / range),
                   ),
                 );
           player.score += pointsEarned;
@@ -509,13 +506,10 @@ const emitLeaderboard = (room: StoredRoom) => {
  */
 const emitAnswerCount = (room: StoredRoom) => {
   const question =
-    room.currentQuestionIndex !== null
-      ? room.quiz.questions[room.currentQuestionIndex]
-      : null;
+    room.currentQuestionIndex !== null ? room.quiz.questions[room.currentQuestionIndex] : null;
   const answeredCount = question
-    ? Array.from(room.players.values()).filter(
-        (p) => p.lastAnsweredQuestionId === question.id,
-      ).length
+    ? Array.from(room.players.values()).filter((p) => p.lastAnsweredQuestionId === question.id)
+        .length
     : 0;
   const payload: AnswerCountPayload = {
     answeredCount,
@@ -624,13 +618,13 @@ const restoreSocketToRoom = (
   const currentQuestion =
     (room.status === "question" || room.status === "leaderboard") &&
     room.currentQuestionIndex !== null
-      ? room.activePublicQuestion ??
+      ? (room.activePublicQuestion ??
         toPublicQuestion(
           room.quiz.questions[room.currentQuestionIndex],
           room.currentQuestionIndex,
           room.quiz.questions.length,
           room.quiz.timeLimit,
-        )
+        ))
       : null;
 
   const payload: RoomRejoinedPayload = {
@@ -1010,8 +1004,7 @@ const registerRealtimeHandlers = () => {
         return;
       }
 
-      const nextIndex =
-        room.currentQuestionIndex === null ? 0 : room.currentQuestionIndex + 1;
+      const nextIndex = room.currentQuestionIndex === null ? 0 : room.currentQuestionIndex + 1;
 
       if (nextIndex >= room.quiz.questions.length) {
         finishGame(room);
@@ -1097,10 +1090,7 @@ const registerRealtimeHandlers = () => {
             const timeFraction = Math.min(elapsedMs / (room.quiz.timeLimit * 1000), 1);
             const basePoints = Math.max(300, Math.round(1000 - 700 * timeFraction));
             const streakBonus =
-              player.streak >= 5 ? 300
-              : player.streak >= 3 ? 150
-              : player.streak >= 2 ? 75
-              : 0;
+              player.streak >= 5 ? 300 : player.streak >= 3 ? 150 : player.streak >= 2 ? 75 : 0;
 
             pointsEarned = basePoints + streakBonus;
             player.score += pointsEarned;
@@ -1117,7 +1107,10 @@ const registerRealtimeHandlers = () => {
           break;
         }
         case "poll": {
-          if (!isString(ans.optionId) || !question.options.some((option) => option.id === ans.optionId)) {
+          if (
+            !isString(ans.optionId) ||
+            !question.options.some((option) => option.id === ans.optionId)
+          ) {
             emitError(socket, "That answer option is not valid.");
             return;
           }

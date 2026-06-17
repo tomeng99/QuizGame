@@ -1,5 +1,5 @@
-import { Pressable, Text, View } from "react-native";
 import type { RankingItem } from "@quizgame/contracts";
+import { Pressable, Text, View } from "react-native";
 import { styles } from "../styles";
 
 interface RankingQuestionProps {

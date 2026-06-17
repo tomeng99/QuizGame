@@ -13,8 +13,7 @@ export function isQuestionReady(question: QuizQuestion): boolean {
       return question.minValue < question.maxValue;
     case "ranking":
       return (
-        question.items.length >= 3 &&
-        question.items.every((item) => item.text.trim().length > 0)
+        question.items.length >= 3 && question.items.every((item) => item.text.trim().length > 0)
       );
   }
 }
@@ -35,9 +34,7 @@ export function validateQuiz(quiz: QuizDraft): string[] {
     switch (question.type) {
       case "multiple-choice":
       case "poll": {
-        const filledOptions = question.options.filter(
-          (option) => option.text.trim().length > 0,
-        );
+        const filledOptions = question.options.filter((option) => option.text.trim().length > 0);
 
         if (filledOptions.length < 2) {
           issues.push(`Question ${index + 1} needs at least two answer options.`);
