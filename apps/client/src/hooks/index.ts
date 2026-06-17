@@ -6,3 +6,4 @@ export { useSocketConnection } from "./useSocketConnection";
 export type { UseSocketConnectionConfig } from "./useSocketConnection";
 export { useQuizEditor } from "./useQuizEditor";
 export type { QuizEditor } from "./useQuizEditor";
+export { useGameActions } from "./useGameActions";
