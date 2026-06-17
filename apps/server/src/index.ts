@@ -28,6 +28,9 @@ import {
 } from "./roomStore";
 import { type TokenStore, InMemoryTokenStore } from "./tokenStore";
 
+// Re-export store types so tests can import them from the server entry point.
+export type { StoredPlayer, StoredRoom };
+
 // ── App setup ──────────────────────────────────────────────────────────────────
 
 const app = Fastify({ logger: true });
@@ -45,11 +48,11 @@ let io: Server;
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const MAX_PLAYERS_PER_ROOM = 100;
-const MAX_QUESTIONS = 50;
-const MAX_PROMPT_LENGTH = 500;
-const MAX_OPTION_TEXT_LENGTH = 200;
-const MAX_NAME_LENGTH = 50;
+export const MAX_PLAYERS_PER_ROOM = 100;
+export const MAX_QUESTIONS = 50;
+export const MAX_PROMPT_LENGTH = 500;
+export const MAX_OPTION_TEXT_LENGTH = 200;
+export const MAX_NAME_LENGTH = 50;
 const HOST_RECONNECT_GRACE_MS = 60_000;  // 60 s before closing a host-less room
 const ROOM_CLEANUP_DELAY_MS = 30 * 60_000; // 30 min after game finishes
 
@@ -75,7 +78,7 @@ const isFiniteNumber = (value: unknown): value is number =>
  * Returns true if the event is allowed under the per-socket sliding-window limit.
  * Automatically resets the window after `windowMs` milliseconds.
  */
-const checkRateLimit = (
+export const checkRateLimit = (
   socketId: string,
   event: string,
   maxCount: number,
@@ -101,7 +104,7 @@ const checkRateLimit = (
 
 // ── Room code generation ───────────────────────────────────────────────────────
 
-const randomCode = () => {
+export const randomCode = () => {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
   for (let index = 0; index < 6; index += 1) {
@@ -110,7 +113,7 @@ const randomCode = () => {
   return code;
 };
 
-const createRoomCode = () => {
+export const createRoomCode = () => {
   let code = randomCode();
   while (roomStore.hasRoom(code)) {
     code = randomCode();
@@ -120,7 +123,7 @@ const createRoomCode = () => {
 
 // ── Quiz normalisation (with runtime validation and size caps) ─────────────────
 
-const normalizeQuestion = (question: unknown, index: number): QuizQuestion | null => {
+export const normalizeQuestion = (question: unknown, index: number): QuizQuestion | null => {
   if (typeof question !== "object" || question === null) return null;
   const q = question as Record<string, unknown>;
 
@@ -235,7 +238,7 @@ const normalizeQuestion = (question: unknown, index: number): QuizQuestion | nul
   };
 };
 
-const normalizeQuiz = (raw: unknown): QuizDraft => {
+export const normalizeQuiz = (raw: unknown): QuizDraft => {
   const q = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
   const title = isString(q.title) ? q.title.trim().slice(0, 200) : "";
 
@@ -257,7 +260,7 @@ const normalizeQuiz = (raw: unknown): QuizDraft => {
 
 // ── Snapshot builders ─────────────────────────────────────────────────────────
 
-const toLeaderboard = (room: StoredRoom): LeaderboardEntry[] =>
+export const toLeaderboard = (room: StoredRoom): LeaderboardEntry[] =>
   Array.from(room.players.values())
     .sort((left, right) => right.score - left.score || left.name.localeCompare(right.name))
     .map((player) => ({
@@ -273,7 +276,7 @@ const toLeaderboard = (room: StoredRoom): LeaderboardEntry[] =>
       pointsEarnedThisRound: player.score - player.scoreBeforeCurrentQuestion,
     }));
 
-const toPlayers = (room: StoredRoom): PlayerSummary[] =>
+export const toPlayers = (room: StoredRoom): PlayerSummary[] =>
   Array.from(room.players.values()).map((player) => ({
     id: player.id,
     name: player.name,
@@ -281,7 +284,7 @@ const toPlayers = (room: StoredRoom): PlayerSummary[] =>
     connected: player.connected,
   }));
 
-const toSnapshot = (room: StoredRoom): RoomSnapshot => ({
+export const toSnapshot = (room: StoredRoom): RoomSnapshot => ({
   roomCode: room.code,
   hostName: room.hostName,
   quizTitle: room.quiz.title,
@@ -303,7 +306,7 @@ const shuffleItems = <T,>(items: T[]): T[] => {
   return next;
 };
 
-const toPublicQuestion = (
+export const toPublicQuestion = (
   question: QuizQuestion,
   index: number,
   total: number,
@@ -1260,4 +1263,9 @@ const main = async () => {
   await app.listen({ port, host });
 };
 
-void main();
+// Only boot the HTTP/socket server when the module is run directly (e.g. `tsx`
+// dev mode or `node dist/index.js`). Vitest sets `VITEST=true`, which prevents
+// the server from binding a port when the module is imported by tests.
+if (!process.env.VITEST && process.env.NODE_ENV !== "test") {
+  void main();
+}
