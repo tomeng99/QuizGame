@@ -92,56 +92,22 @@ Room state, quizzes, and player/host tokens are currently held **in process memo
 
 - `main` is the production branch.
 - `dev` is the development/staging branch.
-- `.github/workflows/deploy.yml` deploys both branches to the same VPS, using `<APP_DIR>/prod` for `main` and `<APP_DIR>/dev` for `dev`.
+- `.github/workflows/deploy.yml` builds and pushes GHCR images for both branches on push. Each image is tagged with the commit SHA and a rolling `<branch>-latest` tag.
 - The client expects `EXPO_PUBLIC_API_URL` during deployment, and the workflow builds separate branch-tagged GHCR images for client and server.
 - Deploys use commit-SHA image tags automatically, so each release points to an immutable image version without manual version bumping.
 
-### Deploy secrets
+### ArgoCD / OpenShift (GitOps)
 
-VPS credentials (shared — same server for prod and dev):
+Deployment is handled by the [operations repo](https://github.com/tomeng99/operations) via ArgoCD on OpenShift. The workflow:
 
-- `VPS_HOST`
-- `VPS_USER`
-- `VPS_SSH_KEY`
-- `VPS_PORT` _(optional, defaults to 22)_
-- `APP_DIR` _(base directory, e.g. `quizgame`; pipeline appends `/prod` or `/dev`)_
+1. Push to `main` or `dev` triggers this repo's Build and Deploy workflow, which builds and pushes images to GHCR.
+2. Update the image tags in `apps/quizgame/<prod|dev>/deployments.yaml` in the operations repo to the new commit SHA.
+3. ArgoCD detects the change and rolls out the new pods automatically.
+
+### Secrets
 
 Per-environment secrets (values differ between prod and dev):
 
-- `PROD_WEB_HTTP_PORT` / `DEV_WEB_HTTP_PORT`
-- `PROD_SERVER_HTTP_PORT` / `DEV_SERVER_HTTP_PORT`
-- `PROD_ALLOWED_ORIGINS` / `DEV_ALLOWED_ORIGINS`
 - `PROD_EXPO_PUBLIC_API_URL` / `DEV_EXPO_PUBLIC_API_URL`
 
-GHCR credentials (shared):
-
-- `GHCR_USER`
-- `GHCR_PAT`
-
-### Host reverse proxy routing
-
-When deploying behind a host-level Caddy reverse proxy (recommended), publish both containers on localhost-only ports and route backend paths directly to the backend service port:
-
-```caddy
-quiz.eng.software {
-    encode gzip zstd
-
-    @api path /api/*
-    reverse_proxy @api 127.0.0.1:3001
-
-    @socket path /socket.io/*
-    reverse_proxy @socket 127.0.0.1:3001
-
-    @uploads path /uploads/*
-    reverse_proxy @uploads 127.0.0.1:3001
-
-    @health path /health
-    reverse_proxy @health 127.0.0.1:3001
-
-    reverse_proxy 127.0.0.1:8080
-}
-```
-
-Use `PROD_WEB_HTTP_PORT` / `DEV_WEB_HTTP_PORT` for the frontend port and `PROD_SERVER_HTTP_PORT` / `DEV_SERVER_HTTP_PORT` for the backend port.
-
-The client container Caddy config serves Expo's hashed web bundles from `/_expo/static/*` with long-lived immutable caching, while the HTML app shell (`index.html` and SPA fallback routes) is served with `no-cache` headers so browsers revalidate on each visit and pick up new deploys quickly.
+GHCR credentials are not needed in the workflow — it uses the built-in `GITHUB_TOKEN` for image pushes.
