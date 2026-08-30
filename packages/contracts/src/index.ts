@@ -71,44 +71,44 @@ export interface LeaderboardEntry {
   pointsEarnedThisRound: number;
 }
 
+/**
+ * Fields every public question carries, whatever its type.
+ *
+ * `endsAt` and `serverNow` make the countdown server-authoritative: the server owns
+ * the deadline, and the client derives the seconds remaining from it rather than
+ * counting down locally from `timeLimit`. `serverNow` is stamped fresh on every emit
+ * so the client can correct for a device clock that disagrees with the server's.
+ */
+interface PublicQuestionBase {
+  id: string;
+  prompt: string;
+  index: number;
+  total: number;
+  timeLimit: number;
+  /** Epoch ms, on the server's clock, when this question stops accepting answers. */
+  endsAt: number;
+  /** The server's clock at the moment this payload was sent. */
+  serverNow: number;
+}
+
 export type PublicQuestion =
-  | {
-      id: string;
-      prompt: string;
-      index: number;
-      total: number;
-      timeLimit: number;
+  | (PublicQuestionBase & {
       type: "multiple-choice";
       options: QuizOption[];
-    }
-  | {
-      id: string;
-      prompt: string;
-      index: number;
-      total: number;
-      timeLimit: number;
+    })
+  | (PublicQuestionBase & {
       type: "poll";
       options: QuizOption[];
-    }
-  | {
-      id: string;
-      prompt: string;
-      index: number;
-      total: number;
-      timeLimit: number;
+    })
+  | (PublicQuestionBase & {
       type: "number";
       minValue: number;
       maxValue: number;
-    }
-  | {
-      id: string;
-      prompt: string;
-      index: number;
-      total: number;
-      timeLimit: number;
+    })
+  | (PublicQuestionBase & {
       type: "ranking";
       items: RankingItem[];
-    };
+    });
 
 export interface RoomSnapshot {
   roomCode: string;

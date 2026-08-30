@@ -72,17 +72,37 @@ export function GameScreen({
       return;
     }
 
-    setSecondsLeft(currentQuestion.timeLimit);
+    // The server owns the deadline, so re-derive the remaining time from it on every tick
+    // instead of decrementing a local counter. A counter drifts whenever the ticks stop
+    // matching real time — a phone that locks mid-question throttles setInterval, and a
+    // reconnect restarts the count from the full time limit — leaving the player looking at
+    // seconds that the server has already spent.
+    //
+    // `endsAt` is on the server's clock, which a player's phone may not agree with, so
+    // shift it by the skew measured against the `serverNow` stamped on this payload. Network
+    // latency lands in that same offset and errs towards giving the player slightly longer,
+    // which is the safe direction to be wrong in.
+    // A client can briefly outrun the server during a rolling deploy and receive a question
+    // with no timing fields on it. Fall back to a deadline anchored locally now, so the
+    // countdown degrades to the old behaviour instead of rendering NaN.
+    const hasServerDeadline =
+      Number.isFinite(currentQuestion.endsAt) && Number.isFinite(currentQuestion.serverNow);
+    const localEndsAt = hasServerDeadline
+      ? currentQuestion.endsAt + (Date.now() - currentQuestion.serverNow)
+      : Date.now() + currentQuestion.timeLimit * 1000;
+    const readSecondsLeft = () => Math.max(0, Math.ceil((localEndsAt - Date.now()) / 1000));
 
+    setSecondsLeft(readSecondsLeft());
+
+    // Ticks faster than once a second so the displayed number turns over close to the real
+    // second boundary. Repeat values are no-op state updates, so this does not add renders.
     const interval = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev === null || prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+      const remaining = readSecondsLeft();
+      setSecondsLeft(remaining);
+      if (remaining === 0) {
+        clearInterval(interval);
+      }
+    }, 250);
 
     return () => clearInterval(interval);
   }, [currentQuestion, room.status]);

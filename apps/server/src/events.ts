@@ -21,7 +21,7 @@ import {
 } from "./constants";
 import { checkRateLimit, rateLimits } from "./rateLimit";
 import { createRoomCode } from "./roomCode";
-import { toPublicQuestion, toSnapshot } from "./snapshots";
+import { toPublicQuestion, toSnapshot, withServerClock } from "./snapshots";
 import { roomStore, tokenStore } from "./store";
 import type { StoredPlayer, StoredRoom } from "./types";
 import { isFiniteNumber, isString, normalizeQuiz } from "./validation";
@@ -207,11 +207,16 @@ const startQuestion = (
 
   const question = room.quiz.questions[questionIndex];
   const { timeLimit } = room.quiz;
+  // The deadline the auto-advance timer below will fire on. Sending it to clients keeps
+  // their countdown honest across reconnects and backgrounded tabs, where a locally
+  // counted-down timer drifts away from when the server actually closes the question.
+  const endsAt = (room.questionStartedAt ?? Date.now()) + timeLimit * 1000;
   room.activePublicQuestion = toPublicQuestion(
     question,
     questionIndex,
     room.quiz.questions.length,
     timeLimit,
+    endsAt,
   );
   log.info({ roomCode: room.code, questionIndex }, "question started");
 
@@ -276,16 +281,22 @@ const restoreSocketToRoom = (
   socket.data.token = token;
   socket.join(room.code);
 
+  // Re-stamp the cached question with the current server clock so the reconnecting client
+  // measures its skew against "now" and lands on the original deadline, rather than
+  // restarting a full-length countdown for a question that is already half over.
   const currentQuestion =
     (room.status === "question" || room.status === "leaderboard") &&
     room.currentQuestionIndex !== null
-      ? (room.activePublicQuestion ??
-        toPublicQuestion(
-          room.quiz.questions[room.currentQuestionIndex],
-          room.currentQuestionIndex,
-          room.quiz.questions.length,
-          room.quiz.timeLimit,
-        ))
+      ? withServerClock(
+          room.activePublicQuestion ??
+            toPublicQuestion(
+              room.quiz.questions[room.currentQuestionIndex],
+              room.currentQuestionIndex,
+              room.quiz.questions.length,
+              room.quiz.timeLimit,
+              (room.questionStartedAt ?? Date.now()) + room.quiz.timeLimit * 1000,
+            ),
+        )
       : null;
 
   const payload: RoomRejoinedPayload = {
