@@ -64,6 +64,7 @@ jobs:
             ${{ env.CLIENT_IMAGE }}:${{ steps.image-tag.outputs.deploy }}
           build-args: |
             EXPO_PUBLIC_API_URL=${{ env.EXPO_PUBLIC_API_URL }}
+            UMAMI_WEBSITE_ID=${{ github.ref_name == 'main' && '6db3c650-6547-452d-89ca-498d9e7d7c2d' || '' }}
 
       - name: Copy deploy files to VPS
         uses: appleboy/scp-action@v0.1.7
