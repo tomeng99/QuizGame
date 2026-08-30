@@ -16,7 +16,13 @@ export {
 } from "./constants";
 export { checkRateLimit, rateLimits } from "./rateLimit";
 export { createRoomCode, randomCode } from "./roomCode";
-export { toLeaderboard, toPlayers, toPublicQuestion, toSnapshot } from "./snapshots";
+export {
+  toLeaderboard,
+  toPlayers,
+  toPublicQuestion,
+  toSnapshot,
+  withServerClock,
+} from "./snapshots";
 export type { StoredPlayer, StoredRoom } from "./types";
 // ── Re-exports for testability ────────────────────────────────────────────────
 export { isFiniteNumber, isString, normalizeQuestion, normalizeQuiz } from "./validation";

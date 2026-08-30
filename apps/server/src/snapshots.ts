@@ -55,11 +55,24 @@ const shuffleItems = <T>(items: T[]): T[] => {
   return next;
 };
 
+/**
+ * Re-stamps a cached public question with the current server clock.
+ *
+ * `activePublicQuestion` is built once when a question starts, but it is emitted again
+ * later on reconnect. Without a fresh `serverNow` the receiving client would measure its
+ * clock skew against a stale timestamp and read the deadline as further away than it is.
+ */
+export const withServerClock = (question: PublicQuestion): PublicQuestion => ({
+  ...question,
+  serverNow: Date.now(),
+});
+
 export const toPublicQuestion = (
   question: QuizQuestion,
   index: number,
   total: number,
   timeLimit: number,
+  endsAt: number,
 ): PublicQuestion => {
   const base = {
     id: question.id,
@@ -67,6 +80,8 @@ export const toPublicQuestion = (
     index,
     total,
     timeLimit,
+    endsAt,
+    serverNow: Date.now(),
   };
 
   switch (question.type) {

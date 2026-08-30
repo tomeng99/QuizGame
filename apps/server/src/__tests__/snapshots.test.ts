@@ -1,7 +1,18 @@
-import type { QuizQuestion } from "@quizgame/contracts";
-import { describe, expect, it } from "vitest";
-import { toLeaderboard, toPlayers, toPublicQuestion, toSnapshot } from "../index";
+import type { PublicQuestion, QuizQuestion } from "@quizgame/contracts";
+import { describe, expect, it, vi } from "vitest";
+import { toLeaderboard, toPlayers, toPublicQuestion, toSnapshot, withServerClock } from "../index";
 import { makePlayer, makeRoom } from "./helpers";
+
+/** An arbitrary fixed deadline; the exact value only matters where a test asserts on it. */
+const FIXED_ENDS_AT = 1_760_000_030_000;
+
+/**
+ * Widens a public question into a plain field bag so a test can assert that a secret
+ * field (correctOptionId, correctNumber, correctOrder) is absent. Reading a key that is
+ * not on the union is a compile error otherwise, which is exactly what these tests check.
+ */
+const asFields = (question: PublicQuestion): Record<string, unknown> =>
+  question as unknown as Record<string, unknown>;
 
 const mcQuestion: QuizQuestion = {
   id: "question-1",
@@ -148,7 +159,7 @@ describe("toSnapshot", () => {
 
 describe("toPublicQuestion", () => {
   it("strips correctOptionId from a multiple-choice question", () => {
-    const publicQ = toPublicQuestion(mcQuestion, 0, 5, 30) as Record<string, unknown>;
+    const publicQ = asFields(toPublicQuestion(mcQuestion, 0, 5, 30, FIXED_ENDS_AT));
     expect(publicQ.correctOptionId).toBeUndefined();
     expect(publicQ).toMatchObject({
       id: "question-1",
@@ -171,7 +182,7 @@ describe("toPublicQuestion", () => {
         { id: "b", text: "Blue" },
       ],
     };
-    const publicQ = toPublicQuestion(poll, 1, 3, 20) as Record<string, unknown>;
+    const publicQ = asFields(toPublicQuestion(poll, 1, 3, 20, FIXED_ENDS_AT));
     expect(publicQ.correctOptionId).toBeUndefined();
     expect(publicQ.type).toBe("poll");
     expect(publicQ.options).toEqual(poll.options);
@@ -186,7 +197,7 @@ describe("toPublicQuestion", () => {
       minValue: 0,
       maxValue: 100,
     };
-    const publicQ = toPublicQuestion(numberQ, 2, 4, 15) as Record<string, unknown>;
+    const publicQ = asFields(toPublicQuestion(numberQ, 2, 4, 15, FIXED_ENDS_AT));
     expect(publicQ.correctNumber).toBeUndefined();
     expect(publicQ).toMatchObject({ type: "number", minValue: 0, maxValue: 100 });
   });
@@ -203,7 +214,7 @@ describe("toPublicQuestion", () => {
       ],
       correctOrder: ["r1", "r2", "r3"],
     };
-    const publicQ = toPublicQuestion(rankingQ, 3, 6, 30) as {
+    const publicQ = toPublicQuestion(rankingQ, 3, 6, 30, FIXED_ENDS_AT) as {
       type: string;
       items: { id: string }[];
       correctOrder?: unknown;
@@ -213,5 +224,56 @@ describe("toPublicQuestion", () => {
     // Items are a permutation of the originals.
     const ids = publicQ.items.map((i) => i.id).sort();
     expect(ids).toEqual(["r1", "r2", "r3"]);
+  });
+});
+
+describe("public question timing", () => {
+  it("carries the deadline through and stamps serverNow from the current clock", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(FIXED_ENDS_AT - 30_000);
+      const publicQ = toPublicQuestion(mcQuestion, 0, 5, 30, FIXED_ENDS_AT);
+
+      expect(publicQ.endsAt).toBe(FIXED_ENDS_AT);
+      expect(publicQ.serverNow).toBe(FIXED_ENDS_AT - 30_000);
+      // A client joining at the start gets the full time limit.
+      expect(publicQ.endsAt - publicQ.serverNow).toBe(30_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shrinks the remaining time as the question runs, without moving the deadline", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(FIXED_ENDS_AT - 30_000);
+      const started = toPublicQuestion(mcQuestion, 0, 5, 30, FIXED_ENDS_AT);
+
+      // A player drops and reconnects 22 seconds into a 30 second question.
+      vi.setSystemTime(FIXED_ENDS_AT - 8_000);
+      const restamped = withServerClock(started);
+
+      // The deadline is unchanged, so the reconnecting client sees the 8 seconds that
+      // are genuinely left rather than restarting at the full 30.
+      expect(restamped.endsAt).toBe(FIXED_ENDS_AT);
+      expect(restamped.endsAt - restamped.serverNow).toBe(8_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("leaves every other field of the question untouched when re-stamping", () => {
+    const started = toPublicQuestion(mcQuestion, 0, 5, 30, FIXED_ENDS_AT);
+    const restamped = withServerClock(started);
+
+    expect(restamped).toEqual({ ...started, serverNow: restamped.serverNow });
+  });
+
+  it("still hides the correct answer after re-stamping", () => {
+    const restamped = asFields(
+      withServerClock(toPublicQuestion(mcQuestion, 0, 5, 30, FIXED_ENDS_AT)),
+    );
+
+    expect(restamped.correctOptionId).toBeUndefined();
   });
 });
