@@ -1,4 +1,9 @@
-export { useGameState } from "./useGameState";
+export { useGameActions } from "./useGameActions";
 export type { GameState } from "./useGameState";
-export { useQuizEditor } from "./useQuizEditor";
+export { useGameState } from "./useGameState";
 export type { QuizEditor } from "./useQuizEditor";
+export { useQuizEditor } from "./useQuizEditor";
+export type { SessionRole, StoredSession, UseSessionStorage } from "./useSessionStorage";
+export { useSessionStorage } from "./useSessionStorage";
+export type { UseSocketConnectionConfig } from "./useSocketConnection";
+export { useSocketConnection } from "./useSocketConnection";

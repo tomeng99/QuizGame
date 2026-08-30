@@ -1,5 +1,5 @@
-import { Pressable, Text, TextInput, View } from "react-native";
 import type { CheckRoomResult } from "@quizgame/contracts";
+import { Pressable, Text, TextInput, View } from "react-native";
 import { styles } from "../styles";
 import { colors } from "../theme";
 import type { PendingAction } from "../types";
@@ -28,9 +28,7 @@ export function JoinNameScreen({
       <View style={styles.heroCard}>
         <Text style={styles.heroTitle}>You're joining</Text>
         <View style={styles.roomInfoBadge}>
-          <Text style={styles.roomInfoTitle}>
-            {checkedRoom.quizTitle}
-          </Text>
+          <Text style={styles.roomInfoTitle}>{checkedRoom.quizTitle}</Text>
           <Text style={styles.roomInfoDetail}>
             Hosted by {checkedRoom.hostName}
             {" \u2022 "}
@@ -51,15 +49,10 @@ export function JoinNameScreen({
         <Pressable
           disabled={!canJoinRoom}
           onPress={onJoinRoom}
-          style={[
-            styles.bigButton,
-            !canJoinRoom && styles.disabledButton,
-          ]}
+          style={[styles.bigButton, !canJoinRoom && styles.disabledButton]}
         >
           <Text style={styles.bigButtonText}>
-            {pendingAction === "join-room"
-              ? "joining..."
-              : "Let's go"}
+            {pendingAction === "join-room" ? "joining..." : "Let's go"}
           </Text>
         </Pressable>
       </View>

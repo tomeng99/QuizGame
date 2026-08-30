@@ -12,11 +12,7 @@ export function StatusChip({ state }: { state: ConnectionState }) {
       ]}
     >
       <Text style={styles.statusChipText}>
-        {state === "connected"
-          ? "Online"
-          : state === "connecting"
-            ? "Connecting"
-            : "Offline"}
+        {state === "connected" ? "Online" : state === "connecting" ? "Connecting" : "Offline"}
       </Text>
     </View>
   );
