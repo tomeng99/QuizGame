@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: Build and Push
 
 on:
   push:
@@ -6,21 +6,18 @@ on:
       - main
       - dev
 
+# This workflow builds and publishes images only. Deployment is GitOps: ArgoCD
+# syncs tomeng99/operations, so going live means bumping the image tag in
+# apps/quizgame/<env>/deployments.yaml there.
+# ALLOWED_ORIGINS and the HTTP ports are set by the Kubernetes manifests, not
+# here - they were only ever needed by the old podman-compose deploy.
 env:
   SERVER_IMAGE: ghcr.io/${{ github.repository_owner }}/quizgame-server
   CLIENT_IMAGE: ghcr.io/${{ github.repository_owner }}/quizgame-client
-  DEPLOY_HOST: ${{ secrets.VPS_HOST }}
-  DEPLOY_USER: ${{ secrets.VPS_USER }}
-  DEPLOY_KEY: ${{ secrets.VPS_SSH_KEY }}
-  DEPLOY_PORT: ${{ secrets.VPS_PORT }}
-  DEPLOY_DIR: ${{ secrets.APP_DIR }}/${{ github.ref_name == 'main' && 'prod' || 'dev' }}
-  WEB_HTTP_PORT: ${{ github.ref_name == 'main' && secrets.PROD_WEB_HTTP_PORT || secrets.DEV_WEB_HTTP_PORT }}
-  SERVER_HTTP_PORT: ${{ github.ref_name == 'main' && secrets.PROD_SERVER_HTTP_PORT || secrets.DEV_SERVER_HTTP_PORT }}
-  ALLOWED_ORIGINS: ${{ github.ref_name == 'main' && secrets.PROD_ALLOWED_ORIGINS || secrets.DEV_ALLOWED_ORIGINS }}
   EXPO_PUBLIC_API_URL: ${{ github.ref_name == 'main' && secrets.PROD_EXPO_PUBLIC_API_URL || secrets.DEV_EXPO_PUBLIC_API_URL }}
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -65,38 +62,3 @@ jobs:
           build-args: |
             EXPO_PUBLIC_API_URL=${{ env.EXPO_PUBLIC_API_URL }}
             UMAMI_WEBSITE_ID=${{ github.ref_name == 'main' && '6db3c650-6547-452d-89ca-498d9e7d7c2d' || '' }}
-
-      - name: Copy deploy files to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ env.DEPLOY_HOST }}
-          username: ${{ env.DEPLOY_USER }}
-          key: ${{ env.DEPLOY_KEY }}
-          port: ${{ env.DEPLOY_PORT || '22' }}
-          source: docker-compose.yml
-          target: ${{ env.DEPLOY_DIR }}
-
-      - name: Deploy on VPS via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ env.DEPLOY_HOST }}
-          username: ${{ env.DEPLOY_USER }}
-          key: ${{ env.DEPLOY_KEY }}
-          port: ${{ env.DEPLOY_PORT || '22' }}
-          script: |
-            set -e
-            mkdir -p "${{ env.DEPLOY_DIR }}"
-            cat > "${{ env.DEPLOY_DIR }}/.env" <<EOF
-            SERVER_IMAGE=${{ env.SERVER_IMAGE }}
-            CLIENT_IMAGE=${{ env.CLIENT_IMAGE }}
-            IMAGE_TAG=${{ steps.image-tag.outputs.deploy }}
-            WEB_HTTP_PORT=${{ env.WEB_HTTP_PORT }}
-            SERVER_HTTP_PORT=${{ env.SERVER_HTTP_PORT }}
-            ALLOWED_ORIGINS=${{ env.ALLOWED_ORIGINS }}
-            EOF
-            cd "${{ env.DEPLOY_DIR }}"
-            echo '${{ secrets.GHCR_PAT }}' | podman login ghcr.io -u '${{ secrets.GHCR_USER }}' --password-stdin
-            podman compose pull
-            podman compose down
-            podman compose up -d
-            podman image prune -af
