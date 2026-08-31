@@ -157,8 +157,10 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
       const isHostJoin = screenRef.current === "host-setup";
       const role: "host" | "player" = isHostJoin ? "host" : "player";
 
-      // Persist token so the socket can reclaim this session after a drop or refresh.
-      saveSession(payload.playerId, payload.room.roomCode, role);
+      // Persist the secret reconnect token so the socket can reclaim this session
+      // after a drop or refresh. `playerId` is the public id and is only used to
+      // find ourselves in the leaderboard.
+      saveSession(payload.reconnectToken, payload.room.roomCode, role);
       setSessionPlayerId(payload.playerId);
 
       setRoom(payload.room);
@@ -189,11 +191,9 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
     socket.on("room:rejoined", (payload: RoomRejoinedPayload) => {
       pendingReconnectRef.current = false;
 
-      // Restore session player ID from the stable token ref (set before emitting reconnect).
-      const restoredToken = tokenRef.current;
-      if (restoredToken) {
-        setSessionPlayerId(restoredToken);
-      }
+      // The server echoes our public id back, so we no longer have to infer it
+      // from the reconnect token (which is secret and is not in the snapshot).
+      setSessionPlayerId(payload.playerId);
 
       setRoom(payload.room);
       setIsHost(payload.isHost);
@@ -216,9 +216,7 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
           setRankingOrder([]);
         }
         // Derive answered state from the fresh snapshot the server computed on reconnect.
-        const selfEntry = restoredToken
-          ? payload.room.leaderboard.find((e) => e.playerId === restoredToken)
-          : null;
+        const selfEntry = payload.room.leaderboard.find((e) => e.playerId === payload.playerId);
         setHasAnsweredCurrentQuestion(selfEntry?.answeredCurrentQuestion ?? false);
         setAnsweredCount(payload.room.leaderboard.filter((e) => e.answeredCurrentQuestion).length);
       } else {

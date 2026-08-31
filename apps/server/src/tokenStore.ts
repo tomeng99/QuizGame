@@ -3,6 +3,12 @@
 export interface TokenEntry {
   roomCode: string;
   role: "host" | "player";
+  /**
+   * For player tokens, the public id of the player this token unlocks. Needed
+   * because `room.players` is keyed by public id while tokens are secret, so
+   * the two are no longer the same value.
+   */
+  playerId?: string;
 }
 
 // ── TokenStore interface ───────────────────────────────────────────────────────

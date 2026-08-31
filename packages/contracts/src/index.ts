@@ -137,7 +137,18 @@ export type SubmitAnswerPayload =
   | { roomCode: string; type: "ranking"; order: string[] };
 
 export interface RoomJoinedPayload {
+  /**
+   * This client's public identity in the room. Safe to compare against
+   * `LeaderboardEntry.playerId` / `PlayerSummary.id`, both of which are
+   * broadcast to everyone in the room.
+   */
   playerId: string;
+  /**
+   * Secret credential proving this client owns the session, sent only to the
+   * client it belongs to. Never appears in a RoomSnapshot — anyone holding it
+   * can reclaim the session via "player:reconnect" / "host:reconnect".
+   */
+  reconnectToken: string;
   room: RoomSnapshot;
 }
 
@@ -188,6 +199,11 @@ export interface RoomRejoinedPayload {
   room: RoomSnapshot;
   currentQuestion: PublicQuestion | null;
   isHost: boolean;
+  /**
+   * This client's public identity in the room, re-sent so the client can find
+   * itself in `room.leaderboard` without holding on to its reconnect token.
+   */
+  playerId: string;
 }
 
 export interface PlayerReconnectPayload {

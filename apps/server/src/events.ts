@@ -240,8 +240,8 @@ const deleteRoom = (log: FastifyBaseLogger, room: StoredRoom) => {
     room.questionAutoTimer = null;
   }
   tokenStore.deleteToken(room.hostToken);
-  for (const playerId of room.players.keys()) {
-    tokenStore.deleteToken(playerId);
+  for (const player of room.players.values()) {
+    tokenStore.deleteToken(player.reconnectToken);
   }
   roomStore.deleteRoom(room.code);
   log.info({ roomCode: room.code }, "room deleted");
@@ -275,10 +275,12 @@ const restoreSocketToRoom = (
   room: StoredRoom,
   token: string,
   role: "host" | "player",
+  playerId: string,
 ) => {
   socket.data.roomCode = room.code;
   socket.data.role = role;
   socket.data.token = token;
+  socket.data.playerId = playerId;
   socket.join(room.code);
 
   // Re-stamp the cached question with the current server clock so the reconnecting client
@@ -303,6 +305,7 @@ const restoreSocketToRoom = (
     room: toSnapshot(room),
     currentQuestion,
     isHost: role === "host",
+    playerId,
   };
   socket.emit("room:rejoined", payload);
 };
@@ -340,10 +343,12 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
       }
 
       const code = createRoomCode();
+      const hostId = randomUUID();
       const hostToken = randomUUID();
       const room: StoredRoom = {
         code,
         hostSocketId: socket.id,
+        hostId,
         hostToken,
         hostName,
         quiz,
@@ -362,12 +367,16 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
       socket.data.roomCode = code;
       socket.data.role = "host";
       socket.data.token = hostToken;
+      socket.data.playerId = hostId;
       socket.join(code);
 
       log.info({ roomCode: code, hostName }, "room created");
 
+      // hostToken goes only to this socket — it is the host's credential, and the
+      // room snapshot deliberately carries no trace of it.
       socket.emit("room:joined", {
-        playerId: hostToken,
+        playerId: hostId,
+        reconnectToken: hostToken,
         room: toSnapshot(room),
       });
     });
@@ -480,8 +489,10 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
       }
 
       const playerId = randomUUID();
+      const reconnectToken = randomUUID();
       const player: StoredPlayer = {
         id: playerId,
+        reconnectToken,
         socketId: socket.id,
         name,
         score: 0,
@@ -493,16 +504,20 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
       };
 
       room.players.set(playerId, player);
-      tokenStore.setToken(playerId, { roomCode: room.code, role: "player" });
+      tokenStore.setToken(reconnectToken, { roomCode: room.code, role: "player", playerId });
       socket.data.roomCode = room.code;
       socket.data.role = "player";
-      socket.data.token = playerId;
+      socket.data.token = reconnectToken;
+      socket.data.playerId = playerId;
       socket.join(room.code);
 
       log.info({ roomCode: room.code, playerName: name }, "player joined");
 
+      // reconnectToken goes only to this socket. The snapshot below is broadcast to
+      // the whole room and carries the public playerId only.
       socket.emit("room:joined", {
         playerId,
+        reconnectToken,
         room: toSnapshot(room),
       });
       emitRoomUpdate(io, room);
@@ -537,9 +552,11 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
         return;
       }
 
-      const player = room.players.get(p.token);
+      const player = entry.playerId ? room.players.get(entry.playerId) : undefined;
 
-      if (!player) {
+      // Re-check the token against the player record itself, so a stale or
+      // mismatched token entry can never bind a socket to someone else's player.
+      if (!player || player.reconnectToken !== p.token) {
         emitError(socket, "Player not found. Please re-join the room.");
         return;
       }
@@ -548,7 +565,7 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
       player.connected = true;
       log.info({ roomCode: room.code, playerName: player.name }, "player reconnected");
 
-      restoreSocketToRoom(io, socket, room, p.token, "player");
+      restoreSocketToRoom(io, socket, room, p.token, "player", player.id);
       emitRoomUpdate(io, room);
     });
 
@@ -595,7 +612,7 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
       room.hostSocketId = socket.id;
       log.info({ roomCode: room.code }, "host reconnected");
 
-      restoreSocketToRoom(io, socket, room, p.token, "host");
+      restoreSocketToRoom(io, socket, room, p.token, "host", room.hostId);
     });
 
     // ── Host: start the game ─────────────────────────────────────────────────
@@ -713,7 +730,9 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
         return;
       }
 
-      const player = room.players.get(socket.data.token as string);
+      // Identify the answering player from server-held socket state, never from the
+      // payload — a client cannot nominate whose score it is submitting against.
+      const player = room.players.get(socket.data.playerId as string);
 
       if (!player) {
         emitError(socket, "Join the room before answering.");
@@ -877,10 +896,10 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
       // Clean up per-socket rate-limit data to avoid memory growth.
       rateLimits.delete(socket.id);
 
-      const { roomCode, role, token } = socket.data as {
+      const { roomCode, role, playerId } = socket.data as {
         roomCode?: string;
         role?: "host" | "player";
-        token?: string;
+        playerId?: string;
       };
 
       if (!roomCode) return;
@@ -902,9 +921,9 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
           }
         }, HOST_RECONNECT_GRACE_MS);
       } else {
-        // Look up the player by their stable token (O(1), no room scan needed).
-        if (!token) return;
-        const player = room.players.get(token);
+        // Look up the player by their stable public id (O(1), no room scan needed).
+        if (!playerId) return;
+        const player = room.players.get(playerId);
         if (player) {
           player.connected = false;
           log.info({ roomCode, playerName: player.name }, "player disconnected");

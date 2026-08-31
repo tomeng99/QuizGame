@@ -8,7 +8,15 @@ import type {
 // ── Domain types ───────────────────────────────────────────────────────────────
 
 export interface StoredPlayer {
-  id: string; // stable UUID — the reconnect token for this player
+  id: string; // stable UUID — this player's PUBLIC id, broadcast in every snapshot
+  /**
+   * Secret UUID that proves ownership of this player's session on
+   * "player:reconnect". Distinct from `id` on purpose: `id` is broadcast to
+   * every client in the room, so reusing it as the credential would let any
+   * player read another player's token out of a snapshot and take over their
+   * session. Never put this in a payload sent to anyone but its owner.
+   */
+  reconnectToken: string;
   socketId: string; // current socket.id (changes on reconnect)
   name: string;
   score: number;
@@ -25,7 +33,8 @@ export interface StoredPlayer {
 export interface StoredRoom {
   code: string;
   hostSocketId: string | null; // null while host grace-period timer is running
-  hostToken: string; // stable UUID — the reconnect token for the host
+  hostId: string; // stable UUID — the host's public id (never a credential)
+  hostToken: string; // secret UUID — the reconnect token for the host
   hostName: string;
   quiz: QuizDraft;
   status: RoomSnapshot["status"];
