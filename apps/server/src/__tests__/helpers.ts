@@ -4,6 +4,7 @@ import type { StoredPlayer, StoredRoom } from "../index";
 /** Build a minimal StoredPlayer with sensible defaults for tests. */
 export const makePlayer = (overrides: Partial<StoredPlayer> = {}): StoredPlayer => ({
   id: overrides.id ?? "player-1",
+  reconnectToken: overrides.reconnectToken ?? "player-1-token",
   socketId: overrides.socketId ?? "socket-1",
   name: overrides.name ?? "Alice",
   score: overrides.score ?? 0,
@@ -39,6 +40,7 @@ export const makeRoom = (
   return {
     code: overrides.code ?? "ABCDEF",
     hostSocketId: overrides.hostSocketId ?? "host-socket-1",
+    hostId: overrides.hostId ?? "host-1",
     hostToken: overrides.hostToken ?? "host-token-1",
     hostName: overrides.hostName ?? "Host",
     quiz: overrides.quiz ?? defaultQuiz,
