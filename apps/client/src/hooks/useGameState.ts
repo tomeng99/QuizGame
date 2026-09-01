@@ -1,6 +1,7 @@
 import type {
   AnswerAcceptedPayload,
   CheckRoomResult,
+  GameSummary,
   PublicQuestion,
   QuestionRevealPayload,
   RoomSnapshot,
@@ -62,6 +63,8 @@ export interface GameState {
   lastAnswerResult: AnswerAcceptedPayload | null;
   /** Revealed round result after the question closes. */
   questionReveal: QuestionRevealPayload | null;
+  /** End-of-game recap, populated by "game:finished". Null until the quiz ends. */
+  gameSummary: GameSummary | null;
 
   /* ── Helpers ── */
   resetToStart: () => void;
@@ -102,6 +105,9 @@ export function useGameState(): GameState {
   // "leaderboard:update". Carries the correctOptionId so the client can highlight options.
   // Reset to null at the start of every new question.
   const [questionReveal, setQuestionReveal] = useState<QuestionRevealPayload | null>(null);
+  // Populated by "game:finished" and held until the player leaves the finished room, so
+  // the recap survives the snapshot updates that keep arriving while it is on screen.
+  const [gameSummary, setGameSummary] = useState<GameSummary | null>(null);
 
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
@@ -146,6 +152,7 @@ export function useGameState(): GameState {
     setHasAnsweredCurrentQuestion(false);
     setLastAnswerResult(null);
     setQuestionReveal(null);
+    setGameSummary(null);
     setScreen("join-code");
   };
 
@@ -177,6 +184,7 @@ export function useGameState(): GameState {
     setHasAnsweredCurrentQuestion,
     setLastAnswerResult,
     setQuestionReveal,
+    setGameSummary,
     setIsHost,
   });
 
@@ -214,6 +222,7 @@ export function useGameState(): GameState {
     hasAnsweredCurrentQuestion,
     lastAnswerResult,
     questionReveal,
+    gameSummary,
     resetToStart,
   };
 }

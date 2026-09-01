@@ -3,6 +3,8 @@ import type {
   AnswerCountPayload,
   CheckRoomResult,
   ErrorMessagePayload,
+  GameFinishedPayload,
+  GameSummary,
   PublicQuestion,
   QuestionRevealPayload,
   RoomJoinedPayload,
@@ -50,6 +52,7 @@ export interface UseSocketConnectionConfig extends UseSessionStorage {
   setHasAnsweredCurrentQuestion: React.Dispatch<React.SetStateAction<boolean>>;
   setLastAnswerResult: React.Dispatch<React.SetStateAction<AnswerAcceptedPayload | null>>;
   setQuestionReveal: React.Dispatch<React.SetStateAction<QuestionRevealPayload | null>>;
+  setGameSummary: React.Dispatch<React.SetStateAction<GameSummary | null>>;
   setIsHost: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
@@ -89,6 +92,7 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
     setHasAnsweredCurrentQuestion,
     setLastAnswerResult,
     setQuestionReveal,
+    setGameSummary,
     setIsHost,
   } = config;
 
@@ -294,13 +298,17 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
       });
     });
 
-    socket.on("game:finished", (snapshot: RoomSnapshot) => {
+    socket.on("game:finished", (snapshot: GameFinishedPayload) => {
       setRoom(snapshot);
       setCurrentQuestion(null);
       setSelectedOptionId(null);
       setNumberGuess(null);
       setRankingOrder([]);
       setPendingAction(null);
+      // A client can briefly outrun the server during a rolling deploy and receive a
+      // finish payload from the previous build, which carries no recap. Fall back to
+      // hiding the recap rather than rendering an empty one.
+      setGameSummary(snapshot.summary ?? null);
       const winner = snapshot.leaderboard[0];
       setFeedback({
         tone: "success",

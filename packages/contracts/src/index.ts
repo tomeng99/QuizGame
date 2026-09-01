@@ -195,6 +195,67 @@ export type QuestionRevealPayload =
   | { type: "number"; correctNumber: number }
   | { type: "ranking"; correctOrder: string[] };
 
+/**
+ * How one question went, recorded on the server as its round closed.
+ *
+ * Carries the prompt itself because the post-game recap outlives the question
+ * payloads: by the time this is shown the client has long since dropped the
+ * `PublicQuestion` it was rendering.
+ */
+export interface QuestionRoundResult {
+  questionId: string;
+  prompt: string;
+  type: QuestionType;
+  /** Zero-based position of this question in the quiz. */
+  index: number;
+  /** Players who got an answer in before the round closed. */
+  answeredCount: number;
+  /** Players in the room when the round closed. */
+  playerCount: number;
+  /**
+   * Players who answered exactly right. `null` for polls, which have no correct
+   * answer — so the recap can leave them out of accuracy figures entirely rather
+   * than scoring them as zero.
+   */
+  correctCount: number | null;
+}
+
+/** One player's whole-game record, shown to them on the post-game recap. */
+export interface PlayerGameStats {
+  playerId: string;
+  name: string;
+  score: number;
+  /** Rounds this player answered exactly right. Polls never count towards this. */
+  correctAnswers: number;
+  /** Rounds that closed without this player submitting anything. */
+  missedQuestions: number;
+  /** Longest run of consecutive correct answers reached during the game. */
+  bestStreak: number;
+}
+
+/**
+ * The end-of-game recap. Built once, when the game finishes, and sent with
+ * "game:finished". The client cannot reconstruct any of it: per-round answers are
+ * discarded as each question closes, so the server is the only place this exists.
+ */
+export interface GameSummary {
+  /** Rounds actually played, in play order. */
+  questions: QuestionRoundResult[];
+  /** How many of those rounds had a right answer to get. Polls are excluded. */
+  scorableQuestions: number;
+  /** Ordered like `RoomSnapshot.leaderboard` — highest score first. */
+  players: PlayerGameStats[];
+}
+
+/**
+ * Payload of "game:finished". A superset of RoomSnapshot, so a client that
+ * predates the recap still reads every snapshot field it knows and ignores
+ * `summary` — which keeps an old client working against a new server mid-deploy.
+ */
+export interface GameFinishedPayload extends RoomSnapshot {
+  summary: GameSummary;
+}
+
 export interface RoomRejoinedPayload {
   room: RoomSnapshot;
   currentQuestion: PublicQuestion | null;

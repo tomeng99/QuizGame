@@ -14,9 +14,11 @@ export {
   MAX_QUESTIONS,
   ROOM_CLEANUP_DELAY_MS,
 } from "./constants";
+export { isAnswerExactlyCorrect } from "./events";
 export { checkRateLimit, rateLimits } from "./rateLimit";
 export { createRoomCode, randomCode } from "./roomCode";
 export {
+  toGameSummary,
   toLeaderboard,
   toPlayers,
   toPublicQuestion,

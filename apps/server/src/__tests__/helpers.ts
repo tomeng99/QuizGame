@@ -13,6 +13,9 @@ export const makePlayer = (overrides: Partial<StoredPlayer> = {}): StoredPlayer 
   streak: overrides.streak ?? 0,
   scoreBeforeCurrentQuestion: overrides.scoreBeforeCurrentQuestion ?? 0,
   currentAnswer: overrides.currentAnswer ?? null,
+  correctAnswerCount: overrides.correctAnswerCount ?? 0,
+  missedQuestionCount: overrides.missedQuestionCount ?? 0,
+  bestStreak: overrides.bestStreak ?? 0,
 });
 
 const defaultMultipleChoice: QuizQuestion = {
@@ -52,6 +55,7 @@ export const makeRoom = (
     hostCloseTimer: overrides.hostCloseTimer ?? null,
     cleanupTimer: overrides.cleanupTimer ?? null,
     questionAutoTimer: overrides.questionAutoTimer ?? null,
+    roundResults: overrides.roundResults ?? [],
   };
 };
 

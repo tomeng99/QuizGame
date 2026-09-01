@@ -3,10 +3,12 @@ import type {
   AnswerCountPayload,
   CheckRoomPayload,
   CheckRoomResult,
+  GameFinishedPayload,
   HostReconnectPayload,
   PlayerJoinPayload,
   PlayerReconnectPayload,
   QuestionRevealPayload,
+  QuizQuestion,
   RoomRejoinedPayload,
   SubmitAnswerPayload,
 } from "@quizgame/contracts";
@@ -21,7 +23,7 @@ import {
 } from "./constants";
 import { checkRateLimit, rateLimits } from "./rateLimit";
 import { createRoomCode } from "./roomCode";
-import { toPublicQuestion, toSnapshot, withServerClock } from "./snapshots";
+import { toGameSummary, toPublicQuestion, toSnapshot, withServerClock } from "./snapshots";
 import { roomStore, tokenStore } from "./store";
 import type { StoredPlayer, StoredRoom } from "./types";
 import { isFiniteNumber, isString, normalizeQuiz } from "./validation";
@@ -34,6 +36,71 @@ const emitRoomUpdate = (io: Server, room: StoredRoom) => {
 
 const emitRoomClosed = (io: Server, room: StoredRoom, message: string) => {
   io.to(room.code).emit("room:closed", { message });
+};
+
+// ── Round bookkeeping ─────────────────────────────────────────────────────────
+
+/**
+ * Whether a player's answer was exactly right, for the purposes of the recap's
+ * accuracy figures.
+ *
+ * Deliberately stricter than the scoring above: number and ranking questions award
+ * partial credit for being close, but "you got 4 of 7 right" only means something if
+ * "right" means right. Polls have no correct answer at all, so they return `null` and
+ * are left out of the counts rather than being scored as a miss.
+ */
+export const isAnswerExactlyCorrect = (
+  question: QuizQuestion,
+  answer: SubmitAnswerPayload | null,
+): boolean | null => {
+  switch (question.type) {
+    case "poll":
+      return null;
+    case "multiple-choice":
+      return answer?.type === "multiple-choice" && answer.optionId === question.correctOptionId;
+    case "number":
+      return answer?.type === "number" && answer.guess === question.correctNumber;
+    case "ranking":
+      return (
+        answer?.type === "ranking" &&
+        answer.order.length === question.correctOrder.length &&
+        question.correctOrder.every((itemId, itemIndex) => answer.order[itemIndex] === itemId)
+      );
+  }
+};
+
+/**
+ * Records how a round went, for the post-game recap.
+ *
+ * Must run before `currentAnswer` is cleared, since that is the only place a player's
+ * answer for the closing round still exists.
+ */
+const recordRoundResult = (room: StoredRoom, question: QuizQuestion) => {
+  let answeredCount = 0;
+  let correctCount = 0;
+
+  for (const player of room.players.values()) {
+    if (player.lastAnsweredQuestionId === question.id) {
+      answeredCount += 1;
+    } else {
+      player.missedQuestionCount += 1;
+    }
+
+    if (isAnswerExactlyCorrect(question, player.currentAnswer) === true) {
+      correctCount += 1;
+      player.correctAnswerCount += 1;
+    }
+  }
+
+  room.roundResults.push({
+    questionId: question.id,
+    prompt: question.prompt,
+    type: question.type,
+    index: room.currentQuestionIndex ?? room.roundResults.length,
+    answeredCount,
+    playerCount: room.players.size,
+    correctCount: question.type === "poll" ? null : correctCount,
+  });
 };
 
 const emitLeaderboard = (io: Server, log: FastifyBaseLogger, room: StoredRoom) => {
@@ -139,6 +206,11 @@ const emitLeaderboard = (io: Server, log: FastifyBaseLogger, room: StoredRoom) =
         break;
       }
     }
+  }
+
+  // Record the round while the answers are still around — the loop below drops them.
+  if (question) {
+    recordRoundResult(room, question);
   }
 
   for (const player of room.players.values()) {
@@ -257,7 +329,14 @@ const finishGame = (io: Server, log: FastifyBaseLogger, room: StoredRoom) => {
   room.questionStartedAt = null;
   room.activePublicQuestion = null;
   log.info({ roomCode: room.code, players: room.players.size }, "game finished");
-  io.to(room.code).emit("game:finished", toSnapshot(room));
+
+  // A superset of the old snapshot payload, so a client still running the previous
+  // build reads the fields it knows and ignores the recap.
+  const payload: GameFinishedPayload = {
+    ...toSnapshot(room),
+    summary: toGameSummary(room),
+  };
+  io.to(room.code).emit("game:finished", payload);
 
   // Schedule cleanup so finished rooms do not accumulate in memory indefinitely.
   room.cleanupTimer = setTimeout(() => deleteRoom(log, room), ROOM_CLEANUP_DELAY_MS);
@@ -360,6 +439,7 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
         hostCloseTimer: null,
         cleanupTimer: null,
         questionAutoTimer: null,
+        roundResults: [],
       };
 
       roomStore.setRoom(code, room);
@@ -501,6 +581,9 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
         streak: 0,
         scoreBeforeCurrentQuestion: 0,
         currentAnswer: null,
+        correctAnswerCount: 0,
+        missedQuestionCount: 0,
+        bestStreak: 0,
       };
 
       room.players.set(playerId, player);
@@ -768,7 +851,13 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
           }
 
           player.lastAnsweredQuestionId = question.id;
-          player.currentAnswer = null;
+          // Scored immediately below, but still retained: the round record built when
+          // the question closes reads every player's answer back out of `currentAnswer`.
+          player.currentAnswer = {
+            roomCode: room.code,
+            type: "multiple-choice",
+            optionId: ans.optionId,
+          };
 
           let isCorrect = false;
           let pointsEarned = 0;
@@ -776,6 +865,7 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
           if (ans.optionId === question.correctOptionId) {
             isCorrect = true;
             player.streak += 1;
+            player.bestStreak = Math.max(player.bestStreak, player.streak);
 
             const elapsedMs = Math.max(0, Date.now() - (room.questionStartedAt ?? Date.now()));
             const timeFraction = Math.min(elapsedMs / (room.quiz.timeLimit * 1000), 1);
