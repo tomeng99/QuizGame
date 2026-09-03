@@ -21,6 +21,7 @@ import {
 } from "./constants";
 import { checkRateLimit, rateLimits } from "./rateLimit";
 import { createRoomCode } from "./roomCode";
+import { deleteRoom, touchRoom } from "./roomLifecycle";
 import { toPublicQuestion, toSnapshot, withServerClock } from "./snapshots";
 import { roomStore, tokenStore } from "./store";
 import type { StoredPlayer, StoredRoom } from "./types";
@@ -146,6 +147,7 @@ const emitLeaderboard = (io: Server, log: FastifyBaseLogger, room: StoredRoom) =
   }
 
   room.status = "leaderboard";
+  touchRoom(room);
 
   if (revealPayload) {
     io.to(room.code).emit("question:revealed", revealPayload);
@@ -196,6 +198,7 @@ const startQuestion = (
   room.currentQuestionIndex = questionIndex;
   room.questionStartedAt = Date.now();
   room.status = "question";
+  touchRoom(room);
 
   for (const player of room.players.values()) {
     // Snapshot each player's score at question start so we can compute pointsEarnedThisRound
@@ -233,26 +236,13 @@ const startQuestion = (
   }, timeLimit * 1000);
 };
 
-/** Remove a room and all its associated token entries from every store. */
-const deleteRoom = (log: FastifyBaseLogger, room: StoredRoom) => {
-  if (room.questionAutoTimer !== null) {
-    clearTimeout(room.questionAutoTimer);
-    room.questionAutoTimer = null;
-  }
-  tokenStore.deleteToken(room.hostToken);
-  for (const player of room.players.values()) {
-    tokenStore.deleteToken(player.reconnectToken);
-  }
-  roomStore.deleteRoom(room.code);
-  log.info({ roomCode: room.code }, "room deleted");
-};
-
 const finishGame = (io: Server, log: FastifyBaseLogger, room: StoredRoom) => {
   if (room.questionAutoTimer !== null) {
     clearTimeout(room.questionAutoTimer);
     room.questionAutoTimer = null;
   }
   room.status = "finished";
+  touchRoom(room);
   room.currentQuestionIndex = null;
   room.questionStartedAt = null;
   room.activePublicQuestion = null;
@@ -342,6 +332,21 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
         return;
       }
 
+      // A host that goes back to the start screen and hosts again keeps the same
+      // socket, and socket.data below is about to point at the new room. Close the
+      // previous one here — otherwise the disconnect handler, which only ever reads
+      // socket.data.roomCode, would never look at it again and it would sit in
+      // memory until the sweep caught it. The host leaves first so the room:closed
+      // notice reaches the abandoned players only.
+      if (socket.data.role === "host" && isString(socket.data.roomCode)) {
+        const previousRoom = roomStore.getRoom(socket.data.roomCode);
+        if (previousRoom && previousRoom.hostSocketId === socket.id) {
+          socket.leave(previousRoom.code);
+          emitRoomClosed(io, previousRoom, "The host closed this room to start a new one.");
+          deleteRoom(log, previousRoom);
+        }
+      }
+
       const code = createRoomCode();
       const hostId = randomUUID();
       const hostToken = randomUUID();
@@ -357,6 +362,7 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
         questionStartedAt: null,
         activePublicQuestion: null,
         players: new Map(),
+        lastActivityAt: Date.now(),
         hostCloseTimer: null,
         cleanupTimer: null,
         questionAutoTimer: null,
@@ -418,6 +424,8 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
         emitError(socket, "This quiz has already finished.");
         return;
       }
+
+      touchRoom(room);
 
       const result: CheckRoomResult = {
         roomCode: room.code,
@@ -504,6 +512,7 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
       };
 
       room.players.set(playerId, player);
+      touchRoom(room);
       tokenStore.setToken(reconnectToken, { roomCode: room.code, role: "player", playerId });
       socket.data.roomCode = room.code;
       socket.data.role = "player";
@@ -563,6 +572,7 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
 
       player.socketId = socket.id;
       player.connected = true;
+      touchRoom(room);
       log.info({ roomCode: room.code, playerName: player.name }, "player reconnected");
 
       restoreSocketToRoom(io, socket, room, p.token, "player", player.id);
@@ -610,6 +620,7 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
       }
 
       room.hostSocketId = socket.id;
+      touchRoom(room);
       log.info({ roomCode: room.code }, "host reconnected");
 
       restoreSocketToRoom(io, socket, room, p.token, "host", room.hostId);
@@ -877,6 +888,7 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
         }
       }
 
+      touchRoom(room);
       socket.emit("answer:accepted", acceptedPayload);
       emitAnswerCount(io, room);
 

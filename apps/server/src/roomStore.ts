@@ -42,6 +42,13 @@ export interface StoredRoom {
   questionStartedAt: number | null;
   activePublicQuestion: PublicQuestion | null;
   players: Map<string, StoredPlayer>; // keyed by player.id (UUID)
+  /**
+   * Epoch ms of the last event that touched this room. The abandoned-room sweep
+   * reads it to decide whether a room still has anyone driving it — nothing else
+   * bounds the lifetime of a room whose host stops interacting without
+   * disconnecting.
+   */
+  lastActivityAt: number;
   hostCloseTimer: ReturnType<typeof setTimeout> | null;
   cleanupTimer: ReturnType<typeof setTimeout> | null;
   /** Auto-advance timer: fires emitLeaderboard after the question time limit expires. */

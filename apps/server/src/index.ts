@@ -3,6 +3,7 @@ import Fastify from "fastify";
 import { Server } from "socket.io";
 
 import { registerRealtimeHandlers } from "./events";
+import { startRoomSweeper } from "./roomLifecycle";
 import { roomStore } from "./store";
 
 export {
@@ -13,9 +14,12 @@ export {
   MAX_PROMPT_LENGTH,
   MAX_QUESTIONS,
   ROOM_CLEANUP_DELAY_MS,
+  ROOM_IDLE_TIMEOUT_MS,
+  ROOM_SWEEP_INTERVAL_MS,
 } from "./constants";
 export { checkRateLimit, rateLimits } from "./rateLimit";
 export { createRoomCode, randomCode } from "./roomCode";
+export { deleteRoom, startRoomSweeper, sweepAbandonedRooms, touchRoom } from "./roomLifecycle";
 export {
   toLeaderboard,
   toPlayers,
@@ -23,6 +27,7 @@ export {
   toSnapshot,
   withServerClock,
 } from "./snapshots";
+export { roomStore, tokenStore } from "./store";
 export type { StoredPlayer, StoredRoom } from "./types";
 // ── Re-exports for testability ────────────────────────────────────────────────
 export { isFiniteNumber, isString, normalizeQuestion, normalizeQuiz } from "./validation";
@@ -73,6 +78,7 @@ const main = async () => {
   });
 
   registerRealtimeHandlers(io, app.log);
+  startRoomSweeper(io, app.log);
 
   const port = Number(process.env.PORT ?? 3001);
   const host = process.env.HOST ?? "0.0.0.0";
