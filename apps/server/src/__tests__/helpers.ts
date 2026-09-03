@@ -39,7 +39,7 @@ export const makeRoom = (
   const players = overrides.players ?? [];
   return {
     code: overrides.code ?? "ABCDEF",
-    hostSocketId: overrides.hostSocketId ?? "host-socket-1",
+    hostSocketId: "hostSocketId" in overrides ? (overrides.hostSocketId ?? null) : "host-socket-1",
     hostId: overrides.hostId ?? "host-1",
     hostToken: overrides.hostToken ?? "host-token-1",
     hostName: overrides.hostName ?? "Host",
@@ -49,6 +49,7 @@ export const makeRoom = (
     questionStartedAt: overrides.questionStartedAt ?? null,
     activePublicQuestion: overrides.activePublicQuestion ?? null,
     players: new Map(players.map((player) => [player.id, player])),
+    lastActivityAt: overrides.lastActivityAt ?? Date.now(),
     hostCloseTimer: overrides.hostCloseTimer ?? null,
     cleanupTimer: overrides.cleanupTimer ?? null,
     questionAutoTimer: overrides.questionAutoTimer ?? null,

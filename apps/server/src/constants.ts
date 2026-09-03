@@ -7,3 +7,5 @@ export const MAX_OPTION_TEXT_LENGTH = 200;
 export const MAX_NAME_LENGTH = 50;
 export const HOST_RECONNECT_GRACE_MS = 60_000; // 60 s before closing a host-less room
 export const ROOM_CLEANUP_DELAY_MS = 30 * 60_000; // 30 min after game finishes
+export const ROOM_SWEEP_INTERVAL_MS = 60_000; // how often the abandoned-room sweep runs
+export const ROOM_IDLE_TIMEOUT_MS = 2 * 60 * 60_000; // 2 h with no activity in a room
