@@ -11,6 +11,7 @@
     "build": "npm run build -w @quizgame/contracts && npm run build -w @quizgame/server && npm run typecheck -w @quizgame/client",
     "typecheck": "npm run build -w @quizgame/contracts && npm run typecheck -w @quizgame/server && npm run typecheck -w @quizgame/client",
     "check": "npm run typecheck && npm run build",
+    "test": "npm run build -w @quizgame/contracts && npm run test -w @quizgame/server",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write ."
