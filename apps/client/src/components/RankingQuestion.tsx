@@ -45,15 +45,24 @@ export function RankingQuestion({
           return (
             <Pressable
               key={item.id}
+              aria-disabled={disabled}
+              // The position badge is the only thing that distinguishes a placed item from an
+              // unplaced one, so it has to be spelled out for anyone who cannot see it.
+              aria-label={
+                isSelected
+                  ? `${item.text}, position ${selectedIndex + 1} of ${items.length}. Activate to unplace it.`
+                  : `${item.text}, not placed yet. Activate to place it next.`
+              }
               disabled={disabled}
               onPress={() => handlePress(item.id)}
+              role="button"
               style={[
                 styles.rankingChoiceCard,
                 isSelected && styles.rankingChoiceCardSelected,
                 disabled && styles.rankingChoiceCardDisabled,
               ]}
             >
-              <View style={styles.rankingChoiceBadge}>
+              <View aria-hidden style={styles.rankingChoiceBadge}>
                 <Text style={styles.rankingChoiceBadgeText}>
                   {isSelected ? selectedIndex + 1 : "•"}
                 </Text>
@@ -68,8 +77,11 @@ export function RankingQuestion({
         <View style={styles.rankingSelectedHeader}>
           <Text style={styles.rankingSelectedTitle}>Your order</Text>
           <Pressable
+            aria-disabled={disabled || selectedOrder.length === 0}
+            aria-label="Clear your order"
             disabled={disabled || selectedOrder.length === 0}
             onPress={() => onOrderChange([])}
+            role="button"
             style={[
               styles.correctToggle,
               (disabled || selectedOrder.length === 0) && styles.disabledButton,

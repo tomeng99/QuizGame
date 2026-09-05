@@ -10,6 +10,7 @@ import QRCodeSVG from "react-native-qrcode-svg";
 import { LeaderboardRow, RankingQuestion, SliderQuestion, StatusChip } from "../components";
 import { IS_DEV_ENVIRONMENT } from "../config";
 import { OPTION_THEMES } from "../constants";
+import { spellOut } from "../helpers";
 import { styles } from "../styles";
 import { colors } from "../theme";
 import type { ConnectionState, PendingAction } from "../types";
@@ -148,7 +149,7 @@ export function GameScreen({
         : null;
 
     return (
-      <View style={styles.optionsGrid}>
+      <View aria-label="Answer options" role="group" style={styles.optionsGrid}>
         {currentQuestion.options.map((option, optionIndex) => {
           const theme = OPTION_THEMES[optionIndex % OPTION_THEMES.length];
           const selected = selectedOptionId === option.id;
@@ -180,18 +181,34 @@ export function GameScreen({
           const voteWidth =
             totalVotes > 0 ? (`${(voteCount / totalVotes) * 100}%` as `${number}%`) : "0%";
 
+          // Correctness, selection and poll results are all carried by colour and by an emoji
+          // that reads as its Unicode name. Spell every one of them out instead.
+          const stateLabel = [
+            selected ? (answered ? "your answer" : "selected") : null,
+            isCorrectOption ? "correct answer" : null,
+            isMyWrongAnswer ? "incorrect" : null,
+            isMajorityOption ? "most popular" : null,
+            pollReveal ? `${voteCount} ${voteCount === 1 ? "vote" : "votes"}` : null,
+          ].filter((part) => part !== null);
+          const disabled = answered || room.status !== "question";
+
           return (
             <Pressable
               key={option.id}
-              disabled={answered || room.status !== "question"}
+              aria-disabled={disabled}
+              aria-label={[`Option ${theme.label}`, option.text, ...stateLabel].join(", ")}
+              disabled={disabled}
               onPress={() => onSelectOption(option.id)}
+              role="button"
               style={[
                 styles.optionButton,
                 { backgroundColor: bgColor, borderColor },
                 answered && !selected && !isCorrectOption && !isMajorityOption && { opacity: 0.4 },
               ]}
             >
-              <Text style={styles.optionIcon}>{theme.icon}</Text>
+              <Text aria-hidden style={styles.optionIcon}>
+                {theme.icon}
+              </Text>
               <View style={styles.optionContent}>
                 <Text
                   style={[
@@ -202,7 +219,7 @@ export function GameScreen({
                   {option.text}
                 </Text>
                 {pollReveal ? (
-                  <View style={styles.pollResultRow}>
+                  <View aria-hidden style={styles.pollResultRow}>
                     <View style={styles.pollResultTrack}>
                       <View style={[styles.pollResultFill, { width: voteWidth }]} />
                     </View>
@@ -210,9 +227,22 @@ export function GameScreen({
                   </View>
                 ) : null}
               </View>
-              {isCorrectOption && <Text style={styles.optionRevealIcon}>{"\u2705"}</Text>}
-              {isMyWrongAnswer && <Text style={styles.optionRevealIcon}>{"\u274C"}</Text>}
-              {isMajorityOption && <Text style={styles.optionRevealIcon}>{"\uD83D\uDC51"}</Text>}
+              {/* Decorative: the button's own label already names each of these states. */}
+              {isCorrectOption && (
+                <Text aria-hidden style={styles.optionRevealIcon}>
+                  {"\u2705"}
+                </Text>
+              )}
+              {isMyWrongAnswer && (
+                <Text aria-hidden style={styles.optionRevealIcon}>
+                  {"\u274C"}
+                </Text>
+              )}
+              {isMajorityOption && (
+                <Text aria-hidden style={styles.optionRevealIcon}>
+                  {"\uD83D\uDC51"}
+                </Text>
+              )}
             </Pressable>
           );
         })}
@@ -227,7 +257,7 @@ export function GameScreen({
 
     if (currentQuestion.type === "number" && questionReveal.type === "number") {
       return (
-        <View style={styles.revealCard}>
+        <View aria-live="polite" role="status" style={styles.revealCard}>
           <Text style={styles.revealLabel}>Correct number</Text>
           <Text style={styles.revealValue}>{questionReveal.correctNumber}</Text>
           {numberGuess !== null ? (
@@ -241,7 +271,7 @@ export function GameScreen({
       const itemMap = new Map(currentQuestion.items.map((item) => [item.id, item.text]));
 
       return (
-        <View style={styles.revealCard}>
+        <View aria-live="polite" role="status" style={styles.revealCard}>
           <Text style={styles.revealLabel}>Correct order</Text>
           {questionReveal.correctOrder.map((itemId, index) => (
             <Text key={itemId} style={styles.revealListItem}>
@@ -259,8 +289,15 @@ export function GameScreen({
     <>
       <View style={styles.gameHeader}>
         <View style={styles.gameHeaderInfo}>
-          <Text style={styles.gameTitle}>{room.quizTitle}</Text>
-          <Text style={styles.gameSubtitle}>
+          <Text aria-level={1} role="heading" style={styles.gameTitle}>
+            {room.quizTitle}
+          </Text>
+          <Text
+            aria-label={`Room ${spellOut(room.roomCode)}, ${room.players.length} player${
+              room.players.length !== 1 ? "s" : ""
+            }${room.status === "question" ? `, ${answeredCount} answered` : ""}`}
+            style={styles.gameSubtitle}
+          >
             Room {room.roomCode} {"\u2022"} {room.players.length} player
             {room.players.length !== 1 ? "s" : ""}
             {room.status === "question" ? ` \u2022 ${answeredCount} answered` : ""}
@@ -276,7 +313,12 @@ export function GameScreen({
               <Text style={styles.controlsHint}>Scan to join instantly</Text>
               {joinUrl && (
                 <View style={styles.qrPanel}>
-                  <View style={styles.qrFrame}>
+                  <View
+                    accessible
+                    aria-label={`QR code to join room ${spellOut(room.roomCode)}`}
+                    role="img"
+                    style={styles.qrFrame}
+                  >
                     <QRCodeSVG value={joinUrl} size={256} />
                   </View>
                   <Text style={styles.qrCaption}>
@@ -297,20 +339,30 @@ export function GameScreen({
                 </Text>
               )}
               <Text style={styles.controlsMeta}>Manual fallback</Text>
-              <Text style={styles.bigRoomCode}>{room.roomCode}</Text>
-              <Text style={styles.controlsMeta}>
+              <Text aria-label={`Room code ${spellOut(room.roomCode)}`} style={styles.bigRoomCode}>
+                {room.roomCode}
+              </Text>
+              <Text aria-live="polite" role="status" style={styles.controlsMeta}>
                 {room.players.length === 0
                   ? "Waiting for players to join..."
                   : `${room.players.length} player${room.players.length !== 1 ? "s" : ""} joined. Start when ready!`}
               </Text>
               {onOpenPlayerTab && IS_DEV_ENVIRONMENT && (
-                <Pressable onPress={onOpenPlayerTab} style={styles.devButton}>
+                <Pressable
+                  aria-label="Open a player tab"
+                  onPress={onOpenPlayerTab}
+                  role="button"
+                  style={styles.devButton}
+                >
                   <Text style={styles.devButtonText}>⚡ Open player tab</Text>
                 </Pressable>
               )}
               <Pressable
+                aria-disabled={pendingAction !== null || room.players.length === 0}
+                aria-label="Start quiz"
                 disabled={pendingAction !== null || room.players.length === 0}
                 onPress={onStartGame}
+                role="button"
                 style={[
                   styles.bigButton,
                   (pendingAction !== null || room.players.length === 0) && styles.disabledButton,
@@ -329,8 +381,11 @@ export function GameScreen({
                 {answeredCount} of {room.players.length} answered
               </Text>
               <Pressable
+                aria-disabled={pendingAction !== null}
+                aria-label="Close the question and show scores"
                 disabled={pendingAction !== null}
                 onPress={onRevealLeaderboard}
+                role="button"
                 style={[styles.secondaryBigButton, pendingAction !== null && styles.disabledButton]}
               >
                 <Text style={styles.secondaryBigButtonText}>
@@ -343,8 +398,15 @@ export function GameScreen({
             <>
               <Text style={styles.controlsHint}>Scores revealed</Text>
               <Pressable
+                aria-disabled={pendingAction !== null}
+                aria-label={
+                  room.currentQuestionIndex === room.totalQuestions - 1
+                    ? "Finish quiz"
+                    : "Go to the next question"
+                }
                 disabled={pendingAction !== null}
                 onPress={onNextQuestion}
+                role="button"
                 style={[styles.bigButton, pendingAction !== null && styles.disabledButton]}
               >
                 <Text style={styles.bigButtonText}>
@@ -360,7 +422,12 @@ export function GameScreen({
           {room.status === "finished" && (
             <>
               <Text style={styles.controlsHint}>Quiz complete!</Text>
-              <Pressable onPress={onBackToStart} style={styles.secondaryBigButton}>
+              <Pressable
+                aria-label="Back to start"
+                onPress={onBackToStart}
+                role="button"
+                style={styles.secondaryBigButton}
+              >
                 <Text style={styles.secondaryBigButtonText}>Back to start</Text>
               </Pressable>
             </>
@@ -369,14 +436,19 @@ export function GameScreen({
       )}
 
       {!isHost && room.status === "lobby" && (
-        <View style={styles.waitingCard}>
+        <View aria-live="polite" role="status" style={styles.waitingCard}>
           <Text style={styles.waitingText}>You're in! Waiting for {room.hostName} to start...</Text>
         </View>
       )}
       {!isHost && room.status === "finished" && (
-        <View style={styles.waitingCard}>
+        <View aria-live="polite" role="status" style={styles.waitingCard}>
           <Text style={styles.waitingText}>Thanks for playing!</Text>
-          <Pressable onPress={onBackToStart} style={styles.secondaryBigButton}>
+          <Pressable
+            aria-label="Back to start"
+            onPress={onBackToStart}
+            role="button"
+            style={styles.secondaryBigButton}
+          >
             <Text style={styles.secondaryBigButtonText}>Back to start</Text>
           </Pressable>
         </View>
@@ -385,14 +457,25 @@ export function GameScreen({
       {currentQuestion && (
         <View style={styles.questionCard}>
           <View style={styles.questionBadge}>
-            <Text style={styles.questionBadgeText}>
+            <Text
+              aria-label={`Question ${currentQuestion.index + 1} of ${currentQuestion.total}`}
+              style={styles.questionBadgeText}
+            >
               {currentQuestion.index + 1} / {currentQuestion.total}
             </Text>
           </View>
 
           {room.status === "question" && secondsLeft !== null && (
-            <View style={styles.timerRow}>
-              <View style={[styles.timerBar, { flex: 1 }]}>
+            // Deliberately not a live region: this changes every second, and announcing each
+            // tick would talk over the question itself. A screen-reader user can read the
+            // remaining time on demand instead.
+            <View
+              accessible
+              aria-label={`${secondsLeft} seconds remaining`}
+              role="timer"
+              style={styles.timerRow}
+            >
+              <View aria-hidden style={[styles.timerBar, { flex: 1 }]}>
                 <View
                   style={[
                     styles.timerBarFill,
@@ -407,7 +490,11 @@ export function GameScreen({
             </View>
           )}
 
-          <Text style={styles.questionPrompt}>{currentQuestion.prompt}</Text>
+          {/* Live, so a new question reaches a player who is not touching the screen. The
+              prompt text only changes once per question, so this stays quiet in between. */}
+          <Text aria-level={2} aria-live="polite" role="heading" style={styles.questionPrompt}>
+            {currentQuestion.prompt}
+          </Text>
 
           {currentQuestion.type === "multiple-choice" && renderOptionGrid("multiple-choice")}
           {currentQuestion.type === "poll" && renderOptionGrid("poll")}
@@ -433,6 +520,8 @@ export function GameScreen({
 
           {!isHost && hasAnsweredCurrentQuestion && lastAnswerResult && (
             <View
+              aria-live="polite"
+              role="status"
               style={[
                 styles.answerResultCard,
                 lastAnswerResult.pending
@@ -442,7 +531,7 @@ export function GameScreen({
                     : styles.answerResultWrong,
               ]}
             >
-              <Text style={styles.answerResultEmoji}>
+              <Text aria-hidden style={styles.answerResultEmoji}>
                 {lastAnswerResult.pending
                   ? "\uD83C\uDFAF"
                   : lastAnswerResult.isCorrect
@@ -475,8 +564,13 @@ export function GameScreen({
 
           {!isHost && room.status === "question" && (
             <Pressable
+              aria-disabled={!canSubmitAnswer}
+              // Kept short: a disabled button drops out of the tab order, so any "pick an
+              // answer first" hint here would never actually be read out.
+              aria-label={hasAnsweredCurrentQuestion ? "Answer locked in" : "Lock in answer"}
               disabled={!canSubmitAnswer}
               onPress={onSubmitAnswer}
+              role="button"
               style={[
                 hasAnsweredCurrentQuestion ? styles.answeredButton : styles.bigButton,
                 !canSubmitAnswer && !hasAnsweredCurrentQuestion && styles.disabledButton,
@@ -495,13 +589,19 @@ export function GameScreen({
       )}
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>
+        <Text aria-level={2} role="heading" style={styles.sectionTitle}>
           {room.status === "finished" ? "Final Results" : "Leaderboard"}
         </Text>
 
         {winner && room.status === "finished" && (
-          <View style={styles.winnerCard}>
-            <Text style={styles.winnerEmoji}>{"\uD83C\uDFC6"}</Text>
+          <View
+            accessible
+            aria-label={`Winner: ${winner.name}, ${winner.score} points`}
+            style={styles.winnerCard}
+          >
+            <Text aria-hidden style={styles.winnerEmoji}>
+              {"\uD83C\uDFC6"}
+            </Text>
             <Text style={styles.winnerName}>{winner.name}</Text>
             <Text style={styles.winnerScore}>{winner.score} points</Text>
           </View>

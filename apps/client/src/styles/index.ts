@@ -885,9 +885,30 @@ export const styles = StyleSheet.create({
   },
   sliderQuestionValue: {
     color: colors.textPrimary,
+    flex: 1,
     fontSize: fontSizes.display,
     fontWeight: fontWeights.extrabold,
     textAlign: "center",
+  },
+  sliderStepperRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xl,
+  },
+  sliderStepperButton: {
+    alignItems: "center",
+    backgroundColor: colors.bgSurface,
+    borderColor: colors.borderInput,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: "center",
+    width: 48,
+  },
+  sliderStepperButtonText: {
+    color: colors.textPrimary,
+    fontSize: fontSizes.hero,
+    fontWeight: fontWeights.bold,
   },
   sliderQuestionLabels: {
     flexDirection: "row",

@@ -1,5 +1,14 @@
 import type { QuizDraft, QuizQuestion } from "@quizgame/contracts";
 
+/**
+ * Space out a room code so a screen reader spells it rather than pronouncing it as a word —
+ * "A B C 1 2 3", not "abk one-hundred-twenty-three". Players have to read this code back to
+ * their host or type it into another device, so the characters have to come across exactly.
+ */
+export function spellOut(code: string): string {
+  return code.split("").join(" ");
+}
+
 export function isQuestionReady(question: QuizQuestion): boolean {
   if (!question.prompt.trim()) {
     return false;

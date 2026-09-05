@@ -26,7 +26,9 @@ export function JoinNameScreen({
   return (
     <>
       <View style={styles.heroCard}>
-        <Text style={styles.heroTitle}>You're joining</Text>
+        <Text aria-level={2} role="heading" style={styles.heroTitle}>
+          You're joining
+        </Text>
         <View style={styles.roomInfoBadge}>
           <Text style={styles.roomInfoTitle}>{checkedRoom.quizTitle}</Text>
           <Text style={styles.roomInfoDetail}>
@@ -38,6 +40,7 @@ export function JoinNameScreen({
         </View>
         <Text style={styles.inputLabel}>Pick your display name</Text>
         <TextInput
+          aria-label="Your display name"
           autoCorrect={false}
           maxLength={20}
           onChangeText={onPlayerNameChange}
@@ -47,8 +50,11 @@ export function JoinNameScreen({
           value={playerName}
         />
         <Pressable
+          aria-disabled={!canJoinRoom}
+          aria-label="Join the quiz"
           disabled={!canJoinRoom}
           onPress={onJoinRoom}
+          role="button"
           style={[styles.bigButton, !canJoinRoom && styles.disabledButton]}
         >
           <Text style={styles.bigButtonText}>
@@ -57,7 +63,12 @@ export function JoinNameScreen({
         </Pressable>
       </View>
 
-      <Pressable onPress={onBack} style={styles.backLink}>
+      <Pressable
+        aria-label="Back to the room code screen"
+        onPress={onBack}
+        role="button"
+        style={styles.backLink}
+      >
         <Text style={styles.backLinkText}>{"\u2190"} Back</Text>
       </Pressable>
     </>

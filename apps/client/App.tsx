@@ -27,7 +27,9 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {game.screen !== "game" && (
           <View style={styles.headerContainer}>
-            <Text style={styles.title}>QuizGame</Text>
+            <Text aria-level={1} role="heading" style={styles.title}>
+              QuizGame
+            </Text>
             {game.screen === "join-code" && (
               <Text style={styles.subtitle}>Join a live quiz in seconds</Text>
             )}
