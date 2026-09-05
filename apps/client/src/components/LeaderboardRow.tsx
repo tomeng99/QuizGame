@@ -17,8 +17,25 @@ export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps
   const showDelta =
     (roomStatus === "leaderboard" || roomStatus === "finished") && entry.pointsEarnedThisRound > 0;
 
+  // Read as one sentence instead of five fragments ("gold medal", "Alex", "Answered", "1200").
+  // The medal emoji is the only thing marking the top three, and it does not read as a rank.
+  const label = [
+    `Position ${index + 1}`,
+    entry.name,
+    `${entry.score} points`,
+    showDelta ? `up ${entry.pointsEarnedThisRound} this round` : null,
+    roomStatus === "question" ? (entry.answeredCurrentQuestion ? "answered" : "thinking") : null,
+    entry.streak >= 2 ? `${entry.streak} answer streak` : null,
+  ]
+    .filter((part) => part !== null)
+    .join(", ");
+
   return (
-    <View style={[styles.leaderboardRow, index === 0 && styles.leaderboardRowFirst]}>
+    <View
+      accessible
+      aria-label={label}
+      style={[styles.leaderboardRow, index === 0 && styles.leaderboardRowFirst]}
+    >
       <View style={styles.leaderboardLeft}>
         <Text style={styles.leaderboardRank}>{medal ?? `${index + 1}.`}</Text>
         <View>

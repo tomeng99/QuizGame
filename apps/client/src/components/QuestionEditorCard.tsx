@@ -98,6 +98,7 @@ export function QuestionEditorCard({
               </View>
               <View style={styles.editorOptionContent}>
                 <TextInput
+                  aria-label={`Answer ${theme.label}${isCorrect ? ", marked correct" : ""}`}
                   onChangeText={(value) =>
                     showCorrectToggle
                       ? onOptionChange(optionIndex, value)
@@ -110,7 +111,13 @@ export function QuestionEditorCard({
                 />
                 {showCorrectToggle ? (
                   <Pressable
+                    aria-label={
+                      isCorrect
+                        ? `Answer ${theme.label} is the correct one`
+                        : `Mark answer ${theme.label} correct`
+                    }
                     onPress={() => onCorrectOptionChange(option.id)}
+                    role="button"
                     style={[styles.correctToggle, isCorrect && styles.correctToggleActive]}
                   >
                     <Text
@@ -139,27 +146,36 @@ export function QuestionEditorCard({
             <Text style={styles.editorQuestionBadgeText}>Q{questionIndex + 1}</Text>
           </View>
           <View style={styles.editorQuestionHeaderText}>
-            <Text style={styles.editorQuestionTitle}>Question {questionIndex + 1}</Text>
+            <Text aria-level={3} role="heading" style={styles.editorQuestionTitle}>
+              Question {questionIndex + 1}
+            </Text>
             <Text style={styles.editorQuestionDescription}>
               Keep it short, clear, and easy to answer on a phone.
             </Text>
           </View>
         </View>
         {canRemove ? (
-          <Pressable onPress={onRemove} style={styles.removeButton}>
+          <Pressable
+            aria-label={`Remove question ${questionIndex + 1}`}
+            onPress={onRemove}
+            role="button"
+            style={styles.removeButton}
+          >
             <Text style={styles.removeButtonText}>Remove</Text>
           </Pressable>
         ) : null}
       </View>
 
-      <View style={styles.questionTypeSelector}>
+      <View aria-label="Question type" role="group" style={styles.questionTypeSelector}>
         {QUESTION_TYPE_OPTIONS.map((option) => {
           const isActive = option.value === question.type;
 
           return (
             <Pressable
               key={option.value}
+              aria-label={`${option.label}${isActive ? ", selected" : ""}`}
               onPress={() => onTypeChange(option.value)}
+              role="button"
               style={[styles.questionTypePill, isActive && styles.questionTypePillActive]}
             >
               <Text
@@ -174,6 +190,7 @@ export function QuestionEditorCard({
 
       <Text style={styles.inputLabel}>Question prompt</Text>
       <TextInput
+        aria-label={`Question ${questionIndex + 1} prompt`}
         multiline
         onChangeText={onPromptChange}
         placeholder="What should your players answer?"
@@ -190,6 +207,7 @@ export function QuestionEditorCard({
           <View style={styles.editorNumberField}>
             <Text style={styles.inputLabel}>Correct number</Text>
             <TextInput
+              aria-label="Correct number"
               keyboardType="numeric"
               onChangeText={(value) => onCorrectNumberChange(parseNumberInput(value))}
               placeholder="0"
@@ -201,6 +219,7 @@ export function QuestionEditorCard({
           <View style={styles.editorNumberField}>
             <Text style={styles.inputLabel}>Min value</Text>
             <TextInput
+              aria-label="Minimum value"
               keyboardType="numeric"
               onChangeText={(value) => onMinValueChange(parseNumberInput(value))}
               placeholder="0"
@@ -212,6 +231,7 @@ export function QuestionEditorCard({
           <View style={styles.editorNumberField}>
             <Text style={styles.inputLabel}>Max value</Text>
             <TextInput
+              aria-label="Maximum value"
               keyboardType="numeric"
               onChangeText={(value) => onMaxValueChange(parseNumberInput(value))}
               placeholder="100"
@@ -235,7 +255,9 @@ export function QuestionEditorCard({
                 <Text style={styles.rankingEditorItemNumber}>#{itemIndex + 1}</Text>
                 {question.items.length > 3 ? (
                   <Pressable
+                    aria-label={`Remove ranking item ${itemIndex + 1}`}
                     onPress={() => onRemoveRankingItem(itemIndex)}
+                    role="button"
                     style={styles.rankingEditorRemoveButton}
                   >
                     <Text style={styles.rankingEditorRemoveButtonText}>Remove</Text>
@@ -243,6 +265,7 @@ export function QuestionEditorCard({
                 ) : null}
               </View>
               <TextInput
+                aria-label={`Ranking item ${itemIndex + 1}`}
                 onChangeText={(value) => onRankingItemChange(itemIndex, value)}
                 placeholder={`Item ${itemIndex + 1}`}
                 placeholderTextColor={colors.textMuted}
@@ -252,8 +275,11 @@ export function QuestionEditorCard({
             </View>
           ))}
           <Pressable
+            aria-disabled={question.items.length >= 5}
+            aria-label="Add a ranking item"
             disabled={question.items.length >= 5}
             onPress={onAddRankingItem}
+            role="button"
             style={[
               styles.addQuestionInlineButton,
               question.items.length >= 5 && styles.disabledButton,

@@ -73,27 +73,37 @@ export function HostSetupScreen({
   return (
     <>
       <View style={styles.editorHeader}>
-        <Text style={styles.editorTitle}>Create Your Quiz</Text>
+        <Text aria-level={1} role="heading" style={styles.editorTitle}>
+          Create Your Quiz
+        </Text>
         <Text style={styles.editorSubtitle}>
           Start with a blank canvas and build one question at a time.
         </Text>
       </View>
 
       {IS_DEV_ENVIRONMENT && (
-        <Pressable onPress={onLoadSampleQuiz} style={styles.devButton}>
+        <Pressable
+          aria-label="Load sample quiz"
+          onPress={onLoadSampleQuiz}
+          role="button"
+          style={styles.devButton}
+        >
           <Text style={styles.devButtonText}>⚡ Load sample quiz</Text>
         </Pressable>
       )}
 
       <View style={[styles.card, styles.editorBasicsCard]}>
         <View style={styles.editorSectionHeader}>
-          <Text style={styles.sectionTitle}>Quiz details</Text>
+          <Text aria-level={2} role="heading" style={styles.sectionTitle}>
+            Quiz details
+          </Text>
           <Text style={styles.editorSectionText}>
             Add the basics first, then move through your questions without the usual clutter.
           </Text>
         </View>
         <Text style={styles.inputLabel}>Host name</Text>
         <TextInput
+          aria-label="Host name"
           onChangeText={onHostNameChange}
           placeholder="Alex"
           placeholderTextColor={colors.textMuted}
@@ -102,6 +112,7 @@ export function HostSetupScreen({
         />
         <Text style={styles.inputLabel}>Quiz title</Text>
         <TextInput
+          aria-label="Quiz title"
           onChangeText={onQuizTitleChange}
           placeholder="Friday Quiz Night"
           placeholderTextColor={colors.textMuted}
@@ -109,11 +120,15 @@ export function HostSetupScreen({
           value={quiz.title}
         />
         <Text style={styles.inputLabel}>Time per question</Text>
-        <View style={styles.timeLimitRow}>
+        <View aria-label="Time per question" role="group" style={styles.timeLimitRow}>
           {TIME_LIMIT_OPTIONS.map((seconds) => (
             <Pressable
               key={seconds}
+              aria-label={`${seconds} seconds per question${
+                quiz.timeLimit === seconds ? ", selected" : ""
+              }`}
               onPress={() => onTimeLimitChange(seconds)}
+              role="button"
               style={[
                 styles.timeLimitOption,
                 quiz.timeLimit === seconds && styles.timeLimitOptionActive,
@@ -135,32 +150,47 @@ export function HostSetupScreen({
       <View style={[styles.card, styles.editorOverviewCard]}>
         <View style={styles.editorOverviewHeader}>
           <View style={styles.editorSectionHeader}>
-            <Text style={styles.sectionTitle}>Questions</Text>
+            <Text aria-level={2} role="heading" style={styles.sectionTitle}>
+              Questions
+            </Text>
             <Text style={styles.editorSectionText}>
               Mix multiple-choice, poll, number, and ranking rounds in one quiz.
             </Text>
           </View>
-          <Pressable onPress={onAddQuestion} style={styles.addQuestionInlineButton}>
+          <Pressable
+            aria-label="Add a new question"
+            onPress={onAddQuestion}
+            role="button"
+            style={styles.addQuestionInlineButton}
+          >
             <Text style={styles.addQuestionInlineText}>+ New question</Text>
           </Pressable>
         </View>
 
         <View style={styles.editorStatsRow}>
-          <View style={styles.editorStatPill}>
+          <View
+            accessible
+            aria-label={`${quiz.questions.length} total`}
+            style={styles.editorStatPill}
+          >
             <Text style={styles.editorStatValue}>{quiz.questions.length}</Text>
             <Text style={styles.editorStatLabel}>total</Text>
           </View>
-          <View style={styles.editorStatPill}>
+          <View accessible aria-label={`${readyQuestionCount} ready`} style={styles.editorStatPill}>
             <Text style={styles.editorStatValue}>{readyQuestionCount}</Text>
             <Text style={styles.editorStatLabel}>ready</Text>
           </View>
-          <View style={styles.editorStatPill}>
+          <View
+            accessible
+            aria-label={`${quiz.questions.length - readyQuestionCount} drafting`}
+            style={styles.editorStatPill}
+          >
             <Text style={styles.editorStatValue}>{quiz.questions.length - readyQuestionCount}</Text>
             <Text style={styles.editorStatLabel}>drafting</Text>
           </View>
         </View>
 
-        <View style={styles.editorQuestionTabs}>
+        <View aria-label="Questions" role="group" style={styles.editorQuestionTabs}>
           {quiz.questions.map((question, questionIndex) => {
             const isSelected = questionIndex === activeQuestionIndex;
             const isReady = isQuestionReady(question);
@@ -168,7 +198,11 @@ export function HostSetupScreen({
             return (
               <Pressable
                 key={question.id}
+                aria-label={`Question ${questionIndex + 1}, ${isReady ? "ready" : "draft"}${
+                  isSelected ? ", selected" : ""
+                }`}
                 onPress={() => onSelectQuestion(questionIndex)}
+                role="button"
                 style={[styles.editorQuestionTab, isSelected && styles.editorQuestionTabActive]}
               >
                 <Text
@@ -220,12 +254,19 @@ export function HostSetupScreen({
         questionIndex={activeQuestionIndex}
       />
 
-      <Pressable onPress={onAddQuestion} style={styles.addQuestionButton}>
+      <Pressable
+        aria-label="Add another question"
+        onPress={onAddQuestion}
+        role="button"
+        style={styles.addQuestionButton}
+      >
         <Text style={styles.addQuestionText}>+ Add another question</Text>
       </Pressable>
 
       {quizIssues.length > 0 && (
-        <View style={styles.issueCard}>
+        // "Go live" stays disabled until these are cleared, so the reason has to be announced
+        // rather than only appearing above a button that silently refuses to work.
+        <View aria-live="polite" role="status" style={styles.issueCard}>
           <Text style={styles.issueTitle}>Still needed before you go live</Text>
           {quizIssues.map((issue) => (
             <Text key={issue} style={styles.issueText}>
@@ -236,8 +277,11 @@ export function HostSetupScreen({
       )}
 
       <Pressable
+        aria-disabled={!canCreateRoom}
+        aria-label="Go live"
         disabled={!canCreateRoom}
         onPress={onCreateRoom}
+        role="button"
         style={[styles.bigButton, !canCreateRoom && styles.disabledButton]}
       >
         <Text style={styles.bigButtonText}>
@@ -245,7 +289,12 @@ export function HostSetupScreen({
         </Text>
       </Pressable>
 
-      <Pressable onPress={onBack} style={styles.backLink}>
+      <Pressable
+        aria-label="Join a game instead"
+        onPress={onBack}
+        role="button"
+        style={styles.backLink}
+      >
         <Text style={styles.backLinkText}>{"\u2190"} Join a game instead</Text>
       </Pressable>
     </>
