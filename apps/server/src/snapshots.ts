@@ -1,4 +1,5 @@
 import type {
+  GameSummary,
   LeaderboardEntry,
   PlayerSummary,
   PublicQuestion,
@@ -42,6 +43,29 @@ export const toSnapshot = (room: StoredRoom): RoomSnapshot => ({
   totalQuestions: room.quiz.questions.length,
   players: toPlayers(room),
   leaderboard: toLeaderboard(room),
+});
+
+/**
+ * Builds the end-of-game recap from the counters accumulated during play.
+ *
+ * Players come back in the same order as `toLeaderboard`, so the recap and the final
+ * leaderboard agree on who placed where. Rounds that were never reached (a game can
+ * end early) are simply absent from `questions`, which is why `scorableQuestions`
+ * counts the recorded rounds rather than the quiz length.
+ */
+export const toGameSummary = (room: StoredRoom): GameSummary => ({
+  questions: room.roundResults,
+  scorableQuestions: room.roundResults.filter((round) => round.correctCount !== null).length,
+  players: Array.from(room.players.values())
+    .sort((left, right) => right.score - left.score || left.name.localeCompare(right.name))
+    .map((player) => ({
+      playerId: player.id,
+      name: player.name,
+      score: player.score,
+      correctAnswers: player.correctAnswerCount,
+      missedQuestions: player.missedQuestionCount,
+      bestStreak: player.bestStreak,
+    })),
 });
 
 const shuffleItems = <T>(items: T[]): T[] => {

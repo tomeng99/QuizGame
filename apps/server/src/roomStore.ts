@@ -1,5 +1,6 @@
 import type {
   PublicQuestion,
+  QuestionRoundResult,
   QuizDraft,
   RoomSnapshot,
   SubmitAnswerPayload,
@@ -28,6 +29,17 @@ export interface StoredPlayer {
   scoreBeforeCurrentQuestion: number;
   /** The player's answer for the current question (for pending-scoring types). */
   currentAnswer: SubmitAnswerPayload | null;
+  /**
+   * Whole-game counters behind the post-game recap. Accumulated as each round
+   * closes, because the per-round answers they are derived from are cleared
+   * immediately afterwards.
+   */
+  /** Rounds answered exactly right. Polls never count towards this. */
+  correctAnswerCount: number;
+  /** Rounds that closed without this player submitting anything. */
+  missedQuestionCount: number;
+  /** Highest value `streak` reached at any point in the game. */
+  bestStreak: number;
 }
 
 export interface StoredRoom {
@@ -46,6 +58,8 @@ export interface StoredRoom {
   cleanupTimer: ReturnType<typeof setTimeout> | null;
   /** Auto-advance timer: fires emitLeaderboard after the question time limit expires. */
   questionAutoTimer: ReturnType<typeof setTimeout> | null;
+  /** One entry per round that has closed, in play order. Feeds the post-game recap. */
+  roundResults: QuestionRoundResult[];
 }
 
 // ── RoomStore interface ────────────────────────────────────────────────────────

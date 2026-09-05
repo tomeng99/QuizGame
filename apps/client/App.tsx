@@ -113,6 +113,8 @@ export default function App() {
             answeredCount={game.answeredCount}
             lastAnswerResult={game.lastAnswerResult}
             questionReveal={game.questionReveal}
+            gameSummary={game.gameSummary}
+            sessionPlayerId={game.sessionPlayerId}
             onSelectOption={game.setSelectedOptionId}
             onNumberGuessChange={game.setNumberGuess}
             onRankingOrderChange={game.setRankingOrder}

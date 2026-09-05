@@ -1030,6 +1030,88 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
 
+  /* ── Post-game recap ── */
+  summarySelfCard: {
+    alignItems: "center",
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.xxl,
+    gap: spacing.xs,
+    padding: spacing.page,
+  },
+  summarySelfPlace: {
+    color: colors.textPrimary,
+    fontSize: fontSizes.hero,
+    fontWeight: fontWeights.extrabold,
+  },
+  summarySelfScore: {
+    color: colors.textPurpleLight,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+  },
+  summaryStatRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.md,
+    width: "100%",
+  },
+  summaryStat: {
+    alignItems: "center",
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  summaryStatValue: {
+    color: colors.textPrimary,
+    fontSize: fontSizes.xxl,
+    fontWeight: fontWeights.bold,
+  },
+  summaryStatLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.xs,
+    textAlign: "center",
+  },
+  summaryHardest: {
+    color: colors.textPurple,
+    fontSize: fontSizes.body,
+    lineHeight: 20,
+  },
+  summaryRound: {
+    gap: spacing.sm,
+  },
+  summaryRoundHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  summaryRoundIndex: {
+    color: colors.textMuted,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.bold,
+    minWidth: 26,
+  },
+  summaryRoundPrompt: {
+    color: colors.textLight,
+    flex: 1,
+    fontSize: fontSizes.body,
+  },
+  summaryRoundCount: {
+    color: colors.textPrimary,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.bold,
+    minWidth: 48,
+    textAlign: "right",
+  },
+  summaryRoundTrack: {
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.full,
+    height: 6,
+    overflow: "hidden",
+  },
+  summaryRoundFill: {
+    backgroundColor: colors.successBright,
+    borderRadius: radii.full,
+    height: "100%",
+  },
+
   /* ── Leaderboard ── */
   leaderboardRow: {
     alignItems: "center",

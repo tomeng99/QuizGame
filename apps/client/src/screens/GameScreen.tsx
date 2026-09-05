@@ -1,5 +1,6 @@
 import type {
   AnswerAcceptedPayload,
+  GameSummary,
   PublicQuestion,
   QuestionRevealPayload,
   RoomSnapshot,
@@ -7,7 +8,13 @@ import type {
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import QRCodeSVG from "react-native-qrcode-svg";
-import { LeaderboardRow, RankingQuestion, SliderQuestion, StatusChip } from "../components";
+import {
+  GameSummaryCard,
+  LeaderboardRow,
+  RankingQuestion,
+  SliderQuestion,
+  StatusChip,
+} from "../components";
 import { IS_DEV_ENVIRONMENT } from "../config";
 import { OPTION_THEMES } from "../constants";
 import { styles } from "../styles";
@@ -28,6 +35,9 @@ interface GameScreenProps {
   answeredCount: number;
   lastAnswerResult: AnswerAcceptedPayload | null;
   questionReveal: QuestionRevealPayload | null;
+  gameSummary: GameSummary | null;
+  /** This client's public player id, used to find its own row in the recap. */
+  sessionPlayerId: string | null;
   onSelectOption: (optionId: string) => void;
   onNumberGuessChange: (value: number | null) => void;
   onRankingOrderChange: (order: string[]) => void;
@@ -53,6 +63,8 @@ export function GameScreen({
   answeredCount,
   lastAnswerResult,
   questionReveal,
+  gameSummary,
+  sessionPlayerId,
   onSelectOption,
   onNumberGuessChange,
   onRankingOrderChange,
@@ -520,6 +532,10 @@ export function GameScreen({
           ))
         )}
       </View>
+
+      {room.status === "finished" && gameSummary && (
+        <GameSummaryCard summary={gameSummary} isHost={isHost} sessionPlayerId={sessionPlayerId} />
+      )}
     </>
   );
 }
