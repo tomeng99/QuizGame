@@ -249,6 +249,65 @@ const emitError = (socket: Socket, message: string) => {
   socket.emit("error:message", { message });
 };
 
+// ── Seat ownership ────────────────────────────────────────────────────────────
+
+/**
+ * Gives up the seat this socket currently holds in a room, if it holds one.
+ *
+ * A client keeps one socket for its whole session, so "back to start" followed by
+ * joining or hosting again arrives here on the connection that is still seated in
+ * the previous room. Nothing else releases that seat: leaving is purely a
+ * client-side reset, and the disconnect handler only ever looks at the *current*
+ * `socket.data.playerId`, which has already moved on.
+ *
+ * Left alone, the abandoned record stays in the room permanently and still reads
+ * as `connected`. It holds a seat against MAX_PLAYERS_PER_ROOM, keeps showing up
+ * in the player list and leaderboard, and — because the early-advance check counts
+ * every player flagged `connected` — stops any round in that room from ever
+ * closing as soon as the people actually present have answered.
+ *
+ * Only player seats are released here. A host walking away from a room needs the
+ * room itself torn down rather than one seat freed, which is a separate concern.
+ */
+export const releasePlayerSeat = (io: Server, log: FastifyBaseLogger, socket: Socket) => {
+  const { roomCode, role, playerId } = socket.data as {
+    roomCode?: string;
+    role?: "host" | "player";
+    playerId?: string;
+  };
+
+  // Cleared up front so a socket that fails any check below still cannot be
+  // treated as seated afterwards.
+  socket.data.roomCode = undefined;
+  socket.data.role = undefined;
+  socket.data.token = undefined;
+  socket.data.playerId = undefined;
+
+  if (role !== "player" || !roomCode || !playerId) return;
+
+  const room = roomStore.getRoom(roomCode);
+  if (!room) return;
+
+  socket.leave(room.code);
+
+  const player = room.players.get(playerId);
+
+  // Only vacate the seat if this socket is the one still sitting in it — a later
+  // connection may have reclaimed the player through "player:reconnect".
+  if (!player || player.socketId !== socket.id) return;
+
+  tokenStore.deleteToken(player.reconnectToken);
+  room.players.delete(playerId);
+  log.info({ roomCode: room.code, playerName: player.name }, "player released their seat");
+
+  emitRoomUpdate(io, room);
+
+  // The "N of M answered" tally counts seats, so it has to be re-sent once one goes.
+  if (room.status === "question") {
+    emitAnswerCount(io, room);
+  }
+};
+
 // ── Game lifecycle ────────────────────────────────────────────────────────────
 
 const startQuestion = (
@@ -421,6 +480,10 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
         return;
       }
 
+      // Hosting on a connection that is still seated as a player in another room
+      // would strand that seat — the socket is about to point at the new room.
+      releasePlayerSeat(io, log, socket);
+
       const code = createRoomCode();
       const hostId = randomUUID();
       const hostToken = randomUUID();
@@ -567,6 +630,10 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
         emitError(socket, "That player name is already taken in this room.");
         return;
       }
+
+      // Deliberately after every check above: a join that gets rejected must leave
+      // the socket sitting in the room it already had.
+      releasePlayerSeat(io, log, socket);
 
       const playerId = randomUUID();
       const reconnectToken = randomUUID();
