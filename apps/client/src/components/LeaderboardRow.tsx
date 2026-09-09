@@ -1,15 +1,17 @@
 import type { LeaderboardEntry, RoomSnapshot } from "@quizgame/contracts";
 import { Text, View } from "react-native";
 import { MEDALS } from "../constants";
-import { styles } from "../styles";
+import { stageStyles, styles } from "../styles";
 
 interface LeaderboardRowProps {
   entry: LeaderboardEntry;
   index: number;
+  /** True when this row is on a host's presentation screen — see `useStageLayout`. */
+  isStage: boolean;
   roomStatus: RoomSnapshot["status"];
 }
 
-export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps) {
+export function LeaderboardRow({ entry, index, isStage, roomStatus }: LeaderboardRowProps) {
   const medal = MEDALS[index] ?? null;
 
   // Show the "+N pts" delta only after the question has closed (leaderboard or finished),
@@ -34,17 +36,31 @@ export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps
     <View
       accessible
       aria-label={label}
-      style={[styles.leaderboardRow, index === 0 && styles.leaderboardRowFirst]}
+      style={[
+        styles.leaderboardRow,
+        isStage && stageStyles.leaderboardRow,
+        index === 0 && styles.leaderboardRowFirst,
+        index === 0 && isStage && stageStyles.leaderboardRowFirst,
+      ]}
     >
       <View style={styles.leaderboardLeft}>
-        <Text style={styles.leaderboardRank}>{medal ?? `${index + 1}.`}</Text>
+        <Text style={[styles.leaderboardRank, isStage && stageStyles.leaderboardRank]}>
+          {medal ?? `${index + 1}.`}
+        </Text>
         <View>
-          <Text style={[styles.leaderboardName, index === 0 && styles.leaderboardNameFirst]}>
+          <Text
+            style={[
+              styles.leaderboardName,
+              isStage && stageStyles.leaderboardName,
+              index === 0 && styles.leaderboardNameFirst,
+              index === 0 && isStage && stageStyles.leaderboardNameFirst,
+            ]}
+          >
             {entry.name}
           </Text>
           {/* Show live "Answered / Thinking..." status while the question is active. */}
           {roomStatus === "question" ? (
-            <Text style={styles.playerMeta}>
+            <Text style={[styles.playerMeta, isStage && stageStyles.playerMeta]}>
               {entry.answeredCurrentQuestion ? "Answered" : "Thinking..."}
             </Text>
           ) : null}
@@ -52,7 +68,7 @@ export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps
               A streak of 1 doesn't feel like a streak worth highlighting. */}
           {entry.streak >= 2 ? (
             <View style={styles.streakBadge}>
-              <Text style={styles.streakBadgeText}>
+              <Text style={[styles.streakBadgeText, isStage && stageStyles.streakBadgeText]}>
                 {"\uD83D\uDD25"} {entry.streak}x streak
               </Text>
             </View>
@@ -60,11 +76,22 @@ export function LeaderboardRow({ entry, index, roomStatus }: LeaderboardRowProps
         </View>
       </View>
       <View style={styles.scoreColumn}>
-        <Text style={[styles.leaderboardScore, index === 0 && styles.leaderboardScoreFirst]}>
+        <Text
+          style={[
+            styles.leaderboardScore,
+            isStage && stageStyles.leaderboardScore,
+            index === 0 && styles.leaderboardScoreFirst,
+            index === 0 && isStage && stageStyles.leaderboardScoreFirst,
+          ]}
+        >
           {entry.score}
         </Text>
         {/* Score delta — lets lower-ranked players see they can still catch up. */}
-        {showDelta ? <Text style={styles.scoreDelta}>+{entry.pointsEarnedThisRound}</Text> : null}
+        {showDelta ? (
+          <Text style={[styles.scoreDelta, isStage && stageStyles.scoreDelta]}>
+            +{entry.pointsEarnedThisRound}
+          </Text>
+        ) : null}
       </View>
     </View>
   );

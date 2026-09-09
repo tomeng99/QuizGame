@@ -1,10 +1,12 @@
 import type { GameSummary } from "@quizgame/contracts";
 import { Text, View } from "react-native";
-import { styles } from "../styles";
+import { stageStyles, styles } from "../styles";
 
 interface GameSummaryCardProps {
   summary: GameSummary;
   isHost: boolean;
+  /** True when this is a host's presentation screen — see `useStageLayout`. */
+  isStage: boolean;
   /** This client's public player id, used to find its own row in the recap. */
   sessionPlayerId: string | null;
 }
@@ -26,7 +28,12 @@ const toOrdinal = (value: number): string => {
  * moment a quiz is actually played for. All of it comes from the server — the client
  * discards each round's result as the next question starts.
  */
-export function GameSummaryCard({ summary, isHost, sessionPlayerId }: GameSummaryCardProps) {
+export function GameSummaryCard({
+  summary,
+  isHost,
+  isStage,
+  sessionPlayerId,
+}: GameSummaryCardProps) {
   const selfIndex = summary.players.findIndex((player) => player.playerId === sessionPlayerId);
   const self = selfIndex === -1 ? null : summary.players[selfIndex];
 
@@ -46,8 +53,8 @@ export function GameSummaryCard({ summary, isHost, sessionPlayerId }: GameSummar
       : null;
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.sectionTitle}>Game recap</Text>
+    <View style={[styles.card, isStage && stageStyles.card]}>
+      <Text style={[styles.sectionTitle, isStage && stageStyles.sectionTitle]}>Game recap</Text>
 
       {!isHost && self && (
         <View style={styles.summarySelfCard}>
@@ -77,11 +84,13 @@ export function GameSummaryCard({ summary, isHost, sessionPlayerId }: GameSummar
       )}
 
       {summary.questions.length === 0 ? (
-        <Text style={styles.emptyText}>This quiz ended before any question was played.</Text>
+        <Text style={[styles.emptyText, isStage && stageStyles.emptyText]}>
+          This quiz ended before any question was played.
+        </Text>
       ) : (
         <>
           {hardestRound && (
-            <Text style={styles.summaryHardest}>
+            <Text style={[styles.summaryHardest, isStage && stageStyles.summaryHardest]}>
               Hardest question: {"“"}
               {hardestRound.prompt}
               {"”"} {"—"} {hardestRound.correctCount} of {hardestRound.playerCount} got it.
@@ -97,18 +106,29 @@ export function GameSummaryCard({ summary, isHost, sessionPlayerId }: GameSummar
             return (
               <View key={round.questionId} style={styles.summaryRound}>
                 <View style={styles.summaryRoundHeader}>
-                  <Text style={styles.summaryRoundIndex}>Q{round.index + 1}</Text>
-                  <Text style={styles.summaryRoundPrompt} numberOfLines={2}>
+                  <Text
+                    style={[styles.summaryRoundIndex, isStage && stageStyles.summaryRoundIndex]}
+                  >
+                    Q{round.index + 1}
+                  </Text>
+                  <Text
+                    style={[styles.summaryRoundPrompt, isStage && stageStyles.summaryRoundPrompt]}
+                    numberOfLines={2}
+                  >
                     {round.prompt}
                   </Text>
-                  <Text style={styles.summaryRoundCount}>
+                  <Text
+                    style={[styles.summaryRoundCount, isStage && stageStyles.summaryRoundCount]}
+                  >
                     {accuracy === null
                       ? `${round.answeredCount} voted`
                       : `${round.correctCount}/${round.playerCount}`}
                   </Text>
                 </View>
                 {accuracy !== null && (
-                  <View style={styles.summaryRoundTrack}>
+                  <View
+                    style={[styles.summaryRoundTrack, isStage && stageStyles.summaryRoundTrack]}
+                  >
                     <View
                       style={[
                         styles.summaryRoundFill,

@@ -26,3 +26,13 @@ export const spacing = {
 } as const;
 
 export const maxContentWidth = 480;
+
+/**
+ * Viewport width at which the host's game screen switches to the presentation ("stage")
+ * layout. Below this the phone layout is the right one — including for a host running the
+ * game from their own phone.
+ */
+export const stageMinWidth = 900;
+
+/** Content width for the stage layout, so text still wraps at a readable line length. */
+export const stageContentWidth = 1120;

@@ -7,3 +7,4 @@ export type { SessionRole, StoredSession, UseSessionStorage } from "./useSession
 export { useSessionStorage } from "./useSessionStorage";
 export type { UseSocketConnectionConfig } from "./useSocketConnection";
 export { useSocketConnection } from "./useSocketConnection";
+export { useStageLayout } from "./useStageLayout";
