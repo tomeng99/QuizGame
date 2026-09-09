@@ -1,6 +1,8 @@
 import { StyleSheet } from "react-native";
 import { colors, fontSizes, fontWeights, maxContentWidth, radii, spacing } from "../theme";
 
+export { stageStyles } from "./stage";
+
 /**
  * Shared styles for the entire app.
  *
@@ -625,6 +627,19 @@ export const styles = StyleSheet.create({
     fontWeight: fontWeights.extrabold,
     letterSpacing: 6,
     textAlign: "center",
+  },
+  /* The lobby's join instructions, grouped so the stage layout can put the QR code and the
+     room code side by side. In the phone layout the groups are transparent: they repeat the
+     surrounding card's gap and stretch to its width, so the whole thing stays one column. */
+  lobbyPanels: {
+    alignItems: "center",
+    alignSelf: "stretch",
+    gap: spacing.xl,
+  },
+  lobbyPanel: {
+    alignItems: "center",
+    alignSelf: "stretch",
+    gap: spacing.xl,
   },
   qrPanel: {
     alignItems: "center",

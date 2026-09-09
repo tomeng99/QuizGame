@@ -18,13 +18,19 @@ import {
 import { IS_DEV_ENVIRONMENT } from "../config";
 import { OPTION_THEMES } from "../constants";
 import { spellOut } from "../helpers";
-import { styles } from "../styles";
+import { stageStyles, styles } from "../styles";
 import { colors } from "../theme";
 import type { ConnectionState, PendingAction } from "../types";
+
+/** QR side length in points — bigger on the stage layout so it still scans from the back row. */
+const QR_SIZE = 256;
+const QR_SIZE_STAGE = 380;
 
 interface GameScreenProps {
   room: RoomSnapshot;
   isHost: boolean;
+  /** True when this is a host presenting on a big screen — see `useStageLayout`. */
+  isStage: boolean;
   connectionState: ConnectionState;
   pendingAction: PendingAction;
   currentQuestion: PublicQuestion | null;
@@ -53,6 +59,7 @@ interface GameScreenProps {
 export function GameScreen({
   room,
   isHost,
+  isStage,
   connectionState,
   pendingAction,
   currentQuestion,
@@ -161,7 +168,11 @@ export function GameScreen({
         : null;
 
     return (
-      <View aria-label="Answer options" role="group" style={styles.optionsGrid}>
+      <View
+        aria-label="Answer options"
+        role="group"
+        style={[styles.optionsGrid, isStage && stageStyles.optionsGrid]}
+      >
         {currentQuestion.options.map((option, optionIndex) => {
           const theme = OPTION_THEMES[optionIndex % OPTION_THEMES.length];
           const selected = selectedOptionId === option.id;
@@ -214,17 +225,19 @@ export function GameScreen({
               role="button"
               style={[
                 styles.optionButton,
+                isStage && stageStyles.optionButton,
                 { backgroundColor: bgColor, borderColor },
                 answered && !selected && !isCorrectOption && !isMajorityOption && { opacity: 0.4 },
               ]}
             >
-              <Text aria-hidden style={styles.optionIcon}>
+              <Text aria-hidden style={[styles.optionIcon, isStage && stageStyles.optionIcon]}>
                 {theme.icon}
               </Text>
               <View style={styles.optionContent}>
                 <Text
                   style={[
                     styles.optionText,
+                    isStage && stageStyles.optionText,
                     (selected || isCorrectOption || isMajorityOption) && styles.optionTextSelected,
                   ]}
                 >
@@ -232,26 +245,37 @@ export function GameScreen({
                 </Text>
                 {pollReveal ? (
                   <View aria-hidden style={styles.pollResultRow}>
-                    <View style={styles.pollResultTrack}>
+                    <View style={[styles.pollResultTrack, isStage && stageStyles.pollResultTrack]}>
                       <View style={[styles.pollResultFill, { width: voteWidth }]} />
                     </View>
-                    <Text style={styles.pollResultCount}>{voteCount}</Text>
+                    <Text style={[styles.pollResultCount, isStage && stageStyles.pollResultCount]}>
+                      {voteCount}
+                    </Text>
                   </View>
                 ) : null}
               </View>
               {/* Decorative: the button's own label already names each of these states. */}
               {isCorrectOption && (
-                <Text aria-hidden style={styles.optionRevealIcon}>
+                <Text
+                  aria-hidden
+                  style={[styles.optionRevealIcon, isStage && stageStyles.optionRevealIcon]}
+                >
                   {"\u2705"}
                 </Text>
               )}
               {isMyWrongAnswer && (
-                <Text aria-hidden style={styles.optionRevealIcon}>
+                <Text
+                  aria-hidden
+                  style={[styles.optionRevealIcon, isStage && stageStyles.optionRevealIcon]}
+                >
                   {"\u274C"}
                 </Text>
               )}
               {isMajorityOption && (
-                <Text aria-hidden style={styles.optionRevealIcon}>
+                <Text
+                  aria-hidden
+                  style={[styles.optionRevealIcon, isStage && stageStyles.optionRevealIcon]}
+                >
                   {"\uD83D\uDC51"}
                 </Text>
               )}
@@ -269,11 +293,21 @@ export function GameScreen({
 
     if (currentQuestion.type === "number" && questionReveal.type === "number") {
       return (
-        <View aria-live="polite" role="status" style={styles.revealCard}>
-          <Text style={styles.revealLabel}>Correct number</Text>
-          <Text style={styles.revealValue}>{questionReveal.correctNumber}</Text>
+        <View
+          aria-live="polite"
+          role="status"
+          style={[styles.revealCard, isStage && stageStyles.revealCard]}
+        >
+          <Text style={[styles.revealLabel, isStage && stageStyles.revealLabel]}>
+            Correct number
+          </Text>
+          <Text style={[styles.revealValue, isStage && stageStyles.revealValue]}>
+            {questionReveal.correctNumber}
+          </Text>
           {numberGuess !== null ? (
-            <Text style={styles.revealSubtext}>Your guess: {numberGuess}</Text>
+            <Text style={[styles.revealSubtext, isStage && stageStyles.revealSubtext]}>
+              Your guess: {numberGuess}
+            </Text>
           ) : null}
         </View>
       );
@@ -283,10 +317,19 @@ export function GameScreen({
       const itemMap = new Map(currentQuestion.items.map((item) => [item.id, item.text]));
 
       return (
-        <View aria-live="polite" role="status" style={styles.revealCard}>
-          <Text style={styles.revealLabel}>Correct order</Text>
+        <View
+          aria-live="polite"
+          role="status"
+          style={[styles.revealCard, isStage && stageStyles.revealCard]}
+        >
+          <Text style={[styles.revealLabel, isStage && stageStyles.revealLabel]}>
+            Correct order
+          </Text>
           {questionReveal.correctOrder.map((itemId, index) => (
-            <Text key={itemId} style={styles.revealListItem}>
+            <Text
+              key={itemId}
+              style={[styles.revealListItem, isStage && stageStyles.revealListItem]}
+            >
               {index + 1}. {itemMap.get(itemId) ?? itemId}
             </Text>
           ))}
@@ -301,14 +344,18 @@ export function GameScreen({
     <>
       <View style={styles.gameHeader}>
         <View style={styles.gameHeaderInfo}>
-          <Text aria-level={1} role="heading" style={styles.gameTitle}>
+          <Text
+            aria-level={1}
+            role="heading"
+            style={[styles.gameTitle, isStage && stageStyles.gameTitle]}
+          >
             {room.quizTitle}
           </Text>
           <Text
             aria-label={`Room ${spellOut(room.roomCode)}, ${room.players.length} player${
               room.players.length !== 1 ? "s" : ""
             }${room.status === "question" ? `, ${answeredCount} answered` : ""}`}
-            style={styles.gameSubtitle}
+            style={[styles.gameSubtitle, isStage && stageStyles.gameSubtitle]}
           >
             Room {room.roomCode} {"\u2022"} {room.players.length} player
             {room.players.length !== 1 ? "s" : ""}
@@ -319,42 +366,68 @@ export function GameScreen({
       </View>
 
       {isHost && (
-        <View style={styles.hostControlsCard}>
+        <View style={[styles.hostControlsCard, isStage && stageStyles.hostControlsCard]}>
           {room.status === "lobby" && (
             <>
-              <Text style={styles.controlsHint}>Scan to join instantly</Text>
-              {joinUrl && (
-                <View style={styles.qrPanel}>
-                  <View
-                    accessible
-                    aria-label={`QR code to join room ${spellOut(room.roomCode)}`}
-                    role="img"
-                    style={styles.qrFrame}
-                  >
-                    <QRCodeSVG value={joinUrl} size={256} />
+              <Text style={[styles.controlsHint, isStage && stageStyles.controlsHint]}>
+                Scan to join instantly
+              </Text>
+              {/* Side by side on the stage layout, so the whole lobby — QR code, link and room
+                  code — fits on the projector without the host scrolling. Stacked otherwise. */}
+              <View
+                style={[styles.lobbyPanels, isStage && joinUrl !== null && stageStyles.lobbyPanels]}
+              >
+                {joinUrl && (
+                  <View style={[styles.lobbyPanel, isStage && stageStyles.lobbyPanel]}>
+                    <View style={styles.qrPanel}>
+                      <View
+                        accessible
+                        aria-label={`QR code to join room ${spellOut(room.roomCode)}`}
+                        role="img"
+                        style={styles.qrFrame}
+                      >
+                        <QRCodeSVG value={joinUrl} size={isStage ? QR_SIZE_STAGE : QR_SIZE} />
+                      </View>
+                      <Text style={[styles.qrCaption, isStage && stageStyles.qrCaption]}>
+                        Players can scan this with their phone and land straight on the join screen.
+                      </Text>
+                    </View>
                   </View>
-                  <Text style={styles.qrCaption}>
-                    Players can scan this with their phone and land straight on the join screen.
+                )}
+                <View style={[styles.lobbyPanel, isStage && stageStyles.lobbyPanel]}>
+                  {joinUrl ? (
+                    <>
+                      <Text style={[styles.controlsMeta, isStage && stageStyles.controlsMeta]}>
+                        Or open this join link directly
+                      </Text>
+                      <Text
+                        selectable
+                        style={[styles.joinUrlText, isStage && stageStyles.joinUrlText]}
+                      >
+                        {joinUrl}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={[styles.controlsMeta, isStage && stageStyles.controlsMeta]}>
+                      Share the room code below with your players.
+                    </Text>
+                  )}
+                  <Text style={[styles.controlsMeta, isStage && stageStyles.controlsMeta]}>
+                    Manual fallback
+                  </Text>
+                  <Text
+                    aria-label={`Room code ${spellOut(room.roomCode)}`}
+                    style={[styles.bigRoomCode, isStage && stageStyles.bigRoomCode]}
+                  >
+                    {room.roomCode}
                   </Text>
                 </View>
-              )}
-              {joinUrl ? (
-                <>
-                  <Text style={styles.controlsMeta}>Or open this join link directly</Text>
-                  <Text selectable style={styles.joinUrlText}>
-                    {joinUrl}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.controlsMeta}>
-                  Share the room code below with your players.
-                </Text>
-              )}
-              <Text style={styles.controlsMeta}>Manual fallback</Text>
-              <Text aria-label={`Room code ${spellOut(room.roomCode)}`} style={styles.bigRoomCode}>
-                {room.roomCode}
-              </Text>
-              <Text aria-live="polite" role="status" style={styles.controlsMeta}>
+              </View>
+              <Text
+                aria-live="polite"
+                role="status"
+                style={[styles.controlsMeta, isStage && stageStyles.controlsMeta]}
+              >
                 {room.players.length === 0
                   ? "Waiting for players to join..."
                   : `${room.players.length} player${room.players.length !== 1 ? "s" : ""} joined. Start when ready!`}
@@ -380,7 +453,7 @@ export function GameScreen({
                   (pendingAction !== null || room.players.length === 0) && styles.disabledButton,
                 ]}
               >
-                <Text style={styles.bigButtonText}>
+                <Text style={[styles.bigButtonText, isStage && stageStyles.bigButtonText]}>
                   {pendingAction === "start-game" ? "starting..." : "Start quiz"}
                 </Text>
               </Pressable>
@@ -388,8 +461,10 @@ export function GameScreen({
           )}
           {room.status === "question" && (
             <>
-              <Text style={styles.controlsHint}>Question is live</Text>
-              <Text style={styles.controlsMeta}>
+              <Text style={[styles.controlsHint, isStage && stageStyles.controlsHint]}>
+                Question is live
+              </Text>
+              <Text style={[styles.controlsMeta, isStage && stageStyles.controlsMeta]}>
                 {answeredCount} of {room.players.length} answered
               </Text>
               <Pressable
@@ -400,7 +475,12 @@ export function GameScreen({
                 role="button"
                 style={[styles.secondaryBigButton, pendingAction !== null && styles.disabledButton]}
               >
-                <Text style={styles.secondaryBigButtonText}>
+                <Text
+                  style={[
+                    styles.secondaryBigButtonText,
+                    isStage && stageStyles.secondaryBigButtonText,
+                  ]}
+                >
                   {pendingAction === "show-leaderboard" ? "revealing..." : "Show scores"}
                 </Text>
               </Pressable>
@@ -408,7 +488,9 @@ export function GameScreen({
           )}
           {room.status === "leaderboard" && (
             <>
-              <Text style={styles.controlsHint}>Scores revealed</Text>
+              <Text style={[styles.controlsHint, isStage && stageStyles.controlsHint]}>
+                Scores revealed
+              </Text>
               <Pressable
                 aria-disabled={pendingAction !== null}
                 aria-label={
@@ -421,7 +503,7 @@ export function GameScreen({
                 role="button"
                 style={[styles.bigButton, pendingAction !== null && styles.disabledButton]}
               >
-                <Text style={styles.bigButtonText}>
+                <Text style={[styles.bigButtonText, isStage && stageStyles.bigButtonText]}>
                   {pendingAction === "next-question"
                     ? "loading..."
                     : room.currentQuestionIndex === room.totalQuestions - 1
@@ -433,14 +515,23 @@ export function GameScreen({
           )}
           {room.status === "finished" && (
             <>
-              <Text style={styles.controlsHint}>Quiz complete!</Text>
+              <Text style={[styles.controlsHint, isStage && stageStyles.controlsHint]}>
+                Quiz complete!
+              </Text>
               <Pressable
                 aria-label="Back to start"
                 onPress={onBackToStart}
                 role="button"
                 style={styles.secondaryBigButton}
               >
-                <Text style={styles.secondaryBigButtonText}>Back to start</Text>
+                <Text
+                  style={[
+                    styles.secondaryBigButtonText,
+                    isStage && stageStyles.secondaryBigButtonText,
+                  ]}
+                >
+                  Back to start
+                </Text>
               </Pressable>
             </>
           )}
@@ -467,11 +558,11 @@ export function GameScreen({
       )}
 
       {currentQuestion && (
-        <View style={styles.questionCard}>
+        <View style={[styles.questionCard, isStage && stageStyles.questionCard]}>
           <View style={styles.questionBadge}>
             <Text
               aria-label={`Question ${currentQuestion.index + 1} of ${currentQuestion.total}`}
-              style={styles.questionBadgeText}
+              style={[styles.questionBadgeText, isStage && stageStyles.questionBadgeText]}
             >
               {currentQuestion.index + 1} / {currentQuestion.total}
             </Text>
@@ -487,7 +578,10 @@ export function GameScreen({
               role="timer"
               style={styles.timerRow}
             >
-              <View aria-hidden style={[styles.timerBar, { flex: 1 }]}>
+              <View
+                aria-hidden
+                style={[styles.timerBar, isStage && stageStyles.timerBar, { flex: 1 }]}
+              >
                 <View
                   style={[
                     styles.timerBarFill,
@@ -498,13 +592,26 @@ export function GameScreen({
                   ]}
                 />
               </View>
-              <Text style={[styles.timerLabel, { color: timerColor }]}>{secondsLeft}s</Text>
+              <Text
+                style={[
+                  styles.timerLabel,
+                  isStage && stageStyles.timerLabel,
+                  { color: timerColor },
+                ]}
+              >
+                {secondsLeft}s
+              </Text>
             </View>
           )}
 
           {/* Live, so a new question reaches a player who is not touching the screen. The
               prompt text only changes once per question, so this stays quiet in between. */}
-          <Text aria-level={2} aria-live="polite" role="heading" style={styles.questionPrompt}>
+          <Text
+            aria-level={2}
+            aria-live="polite"
+            role="heading"
+            style={[styles.questionPrompt, isStage && stageStyles.questionPrompt]}
+          >
             {currentQuestion.prompt}
           </Text>
 
@@ -516,6 +623,7 @@ export function GameScreen({
               maxValue={currentQuestion.maxValue}
               value={numberGuess}
               disabled={hasAnsweredCurrentQuestion || room.status !== "question"}
+              isStage={isStage}
               onChange={(value) => onNumberGuessChange(value)}
             />
           )}
@@ -524,6 +632,7 @@ export function GameScreen({
               items={currentQuestion.items}
               selectedOrder={rankingOrder}
               disabled={hasAnsweredCurrentQuestion || room.status !== "question"}
+              isStage={isStage}
               onOrderChange={onRankingOrderChange}
             />
           )}
@@ -600,8 +709,12 @@ export function GameScreen({
         </View>
       )}
 
-      <View style={styles.card}>
-        <Text aria-level={2} role="heading" style={styles.sectionTitle}>
+      <View style={[styles.card, isStage && stageStyles.card]}>
+        <Text
+          aria-level={2}
+          role="heading"
+          style={[styles.sectionTitle, isStage && stageStyles.sectionTitle]}
+        >
           {room.status === "finished" ? "Final Results" : "Leaderboard"}
         </Text>
 
@@ -609,24 +722,31 @@ export function GameScreen({
           <View
             accessible
             aria-label={`Winner: ${winner.name}, ${winner.score} points`}
-            style={styles.winnerCard}
+            style={[styles.winnerCard, isStage && stageStyles.winnerCard]}
           >
-            <Text aria-hidden style={styles.winnerEmoji}>
+            <Text aria-hidden style={[styles.winnerEmoji, isStage && stageStyles.winnerEmoji]}>
               {"\uD83C\uDFC6"}
             </Text>
-            <Text style={styles.winnerName}>{winner.name}</Text>
-            <Text style={styles.winnerScore}>{winner.score} points</Text>
+            <Text style={[styles.winnerName, isStage && stageStyles.winnerName]}>
+              {winner.name}
+            </Text>
+            <Text style={[styles.winnerScore, isStage && stageStyles.winnerScore]}>
+              {winner.score} points
+            </Text>
           </View>
         )}
 
         {room.leaderboard.length === 0 ? (
-          <Text style={styles.emptyText}>Players will appear here once they join.</Text>
+          <Text style={[styles.emptyText, isStage && stageStyles.emptyText]}>
+            Players will appear here once they join.
+          </Text>
         ) : (
           room.leaderboard.map((entry, index) => (
             <LeaderboardRow
               key={entry.playerId}
               entry={entry}
               index={index}
+              isStage={isStage}
               roomStatus={room.status}
             />
           ))
@@ -634,7 +754,12 @@ export function GameScreen({
       </View>
 
       {room.status === "finished" && gameSummary && (
-        <GameSummaryCard summary={gameSummary} isHost={isHost} sessionPlayerId={sessionPlayerId} />
+        <GameSummaryCard
+          summary={gameSummary}
+          isHost={isHost}
+          isStage={isStage}
+          sessionPlayerId={sessionPlayerId}
+        />
       )}
     </>
   );

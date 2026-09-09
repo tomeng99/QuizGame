@@ -5,13 +5,15 @@ import type {
   LayoutChangeEvent,
 } from "react-native";
 import { Pressable, Text, View } from "react-native";
-import { styles } from "../styles";
+import { stageStyles, styles } from "../styles";
 
 interface SliderQuestionProps {
   minValue: number;
   maxValue: number;
   value: number;
   disabled: boolean;
+  /** True when this is a host's presentation screen — see `useStageLayout`. */
+  isStage: boolean;
   onChange: (value: number) => void;
 }
 
@@ -23,6 +25,7 @@ export function SliderQuestion({
   maxValue,
   value,
   disabled,
+  isStage,
   onChange,
 }: SliderQuestionProps) {
   const [trackWidth, setTrackWidth] = useState(1);
@@ -83,25 +86,47 @@ export function SliderQuestion({
           disabled={disabled || atMin}
           onPress={() => stepBy(-step)}
           role="button"
-          style={[styles.sliderStepperButton, (disabled || atMin) && styles.disabledButton]}
+          style={[
+            styles.sliderStepperButton,
+            isStage && stageStyles.sliderStepperButton,
+            (disabled || atMin) && styles.disabledButton,
+          ]}
         >
-          <Text style={styles.sliderStepperButtonText}>{"−"}</Text>
+          <Text
+            style={[styles.sliderStepperButtonText, isStage && stageStyles.sliderStepperButtonText]}
+          >
+            {"−"}
+          </Text>
         </Pressable>
-        <Text style={styles.sliderQuestionValue}>{safeValue}</Text>
+        <Text style={[styles.sliderQuestionValue, isStage && stageStyles.sliderQuestionValue]}>
+          {safeValue}
+        </Text>
         <Pressable
           aria-disabled={disabled || atMax}
           aria-label={`Increase guess by ${step}`}
           disabled={disabled || atMax}
           onPress={() => stepBy(step)}
           role="button"
-          style={[styles.sliderStepperButton, (disabled || atMax) && styles.disabledButton]}
+          style={[
+            styles.sliderStepperButton,
+            isStage && stageStyles.sliderStepperButton,
+            (disabled || atMax) && styles.disabledButton,
+          ]}
         >
-          <Text style={styles.sliderStepperButtonText}>{"+"}</Text>
+          <Text
+            style={[styles.sliderStepperButtonText, isStage && stageStyles.sliderStepperButtonText]}
+          >
+            {"+"}
+          </Text>
         </Pressable>
       </View>
       <View aria-hidden style={styles.sliderQuestionLabels}>
-        <Text style={styles.sliderQuestionLabel}>{minValue}</Text>
-        <Text style={styles.sliderQuestionLabel}>{maxValue}</Text>
+        <Text style={[styles.sliderQuestionLabel, isStage && stageStyles.sliderQuestionLabel]}>
+          {minValue}
+        </Text>
+        <Text style={[styles.sliderQuestionLabel, isStage && stageStyles.sliderQuestionLabel]}>
+          {maxValue}
+        </Text>
       </View>
       <View
         accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
@@ -117,12 +142,20 @@ export function SliderQuestion({
         onResponderMove={handleGesture}
         onStartShouldSetResponder={() => !disabled}
         role="slider"
-        style={styles.sliderTrack}
+        style={[styles.sliderTrack, isStage && stageStyles.sliderTrack]}
       >
         <View style={[styles.sliderTrackFill, { width: `${progress * 100}%` as `${number}%` }]} />
-        <View style={[styles.sliderThumb, { left: `${progress * 100}%` as `${number}%` }]} />
+        <View
+          style={[
+            styles.sliderThumb,
+            isStage && stageStyles.sliderThumb,
+            { left: `${progress * 100}%` as `${number}%` },
+          ]}
+        />
       </View>
-      <Text style={styles.sliderQuestionHint}>Drag or tap the bar, or use the buttons above.</Text>
+      <Text style={[styles.sliderQuestionHint, isStage && stageStyles.sliderQuestionHint]}>
+        Drag or tap the bar, or use the buttons above.
+      </Text>
     </View>
   );
 }

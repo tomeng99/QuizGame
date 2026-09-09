@@ -3,14 +3,15 @@ import { useMemo } from "react";
 import { Platform, SafeAreaView, ScrollView, Text, View } from "react-native";
 import { FeedbackBanner, StatusChip } from "./src/components";
 import { getJoinUrl } from "./src/config";
-import { useGameActions, useGameState, useQuizEditor } from "./src/hooks";
+import { useGameActions, useGameState, useQuizEditor, useStageLayout } from "./src/hooks";
 import { GameScreen, HostSetupScreen, JoinCodeScreen, JoinNameScreen } from "./src/screens";
-import { styles } from "./src/styles";
+import { stageStyles, styles } from "./src/styles";
 
 export default function App() {
   const game = useGameState();
   const editor = useQuizEditor();
   const actions = useGameActions(game, editor);
+  const isStage = useStageLayout(game.isHost, game.screen);
 
   const joinUrl = useMemo(() => (game.room ? getJoinUrl(game.room.roomCode) : null), [game.room]);
 
@@ -24,7 +25,10 @@ export default function App() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, isStage && stageStyles.scrollContent]}
+        keyboardShouldPersistTaps="handled"
+      >
         {game.screen !== "game" && (
           <View style={styles.headerContainer}>
             <Text aria-level={1} role="heading" style={styles.title}>
@@ -104,6 +108,7 @@ export default function App() {
           <GameScreen
             room={game.room}
             isHost={game.isHost}
+            isStage={isStage}
             connectionState={game.connectionState}
             pendingAction={game.pendingAction}
             currentQuestion={game.currentQuestion}

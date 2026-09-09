@@ -1,11 +1,13 @@
 import type { RankingItem } from "@quizgame/contracts";
 import { Pressable, Text, View } from "react-native";
-import { styles } from "../styles";
+import { stageStyles, styles } from "../styles";
 
 interface RankingQuestionProps {
   items: RankingItem[];
   selectedOrder: string[];
   disabled: boolean;
+  /** True when this is a host's presentation screen — see `useStageLayout`. */
+  isStage: boolean;
   onOrderChange: (order: string[]) => void;
 }
 
@@ -13,6 +15,7 @@ export function RankingQuestion({
   items,
   selectedOrder,
   disabled,
+  isStage,
   onOrderChange,
 }: RankingQuestionProps) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -36,7 +39,9 @@ export function RankingQuestion({
 
   return (
     <View style={styles.rankingQuestionCard}>
-      <Text style={styles.rankingQuestionTitle}>Tap items in the right order</Text>
+      <Text style={[styles.rankingQuestionTitle, isStage && stageStyles.rankingQuestionTitle]}>
+        Tap items in the right order
+      </Text>
       <View style={styles.rankingQuestionList}>
         {items.map((item) => {
           const selectedIndex = selectedOrder.indexOf(item.id);
@@ -58,16 +63,27 @@ export function RankingQuestion({
               role="button"
               style={[
                 styles.rankingChoiceCard,
+                isStage && stageStyles.rankingChoiceCard,
                 isSelected && styles.rankingChoiceCardSelected,
                 disabled && styles.rankingChoiceCardDisabled,
               ]}
             >
-              <View aria-hidden style={styles.rankingChoiceBadge}>
-                <Text style={styles.rankingChoiceBadgeText}>
+              <View
+                aria-hidden
+                style={[styles.rankingChoiceBadge, isStage && stageStyles.rankingChoiceBadge]}
+              >
+                <Text
+                  style={[
+                    styles.rankingChoiceBadgeText,
+                    isStage && stageStyles.rankingChoiceBadgeText,
+                  ]}
+                >
                   {isSelected ? selectedIndex + 1 : "•"}
                 </Text>
               </View>
-              <Text style={styles.rankingChoiceText}>{item.text}</Text>
+              <Text style={[styles.rankingChoiceText, isStage && stageStyles.rankingChoiceText]}>
+                {item.text}
+              </Text>
             </Pressable>
           );
         })}
@@ -75,7 +91,9 @@ export function RankingQuestion({
 
       <View style={styles.rankingSelectedCard}>
         <View style={styles.rankingSelectedHeader}>
-          <Text style={styles.rankingSelectedTitle}>Your order</Text>
+          <Text style={[styles.rankingSelectedTitle, isStage && stageStyles.rankingSelectedTitle]}>
+            Your order
+          </Text>
           <Pressable
             aria-disabled={disabled || selectedOrder.length === 0}
             aria-label="Clear your order"
@@ -91,10 +109,15 @@ export function RankingQuestion({
           </Pressable>
         </View>
         {orderedItems.length === 0 ? (
-          <Text style={styles.rankingSelectedHint}>Tap the first item to begin.</Text>
+          <Text style={[styles.rankingSelectedHint, isStage && stageStyles.rankingSelectedHint]}>
+            Tap the first item to begin.
+          </Text>
         ) : (
           orderedItems.map((item, index) => (
-            <Text key={item.id} style={styles.rankingSelectedItem}>
+            <Text
+              key={item.id}
+              style={[styles.rankingSelectedItem, isStage && stageStyles.rankingSelectedItem]}
+            >
               {index + 1}. {item.text}
             </Text>
           ))
