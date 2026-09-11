@@ -1,9 +1,8 @@
 import type { FastifyBaseLogger } from "fastify";
-import type { Server, Socket } from "socket.io";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { releasePlayerSeat } from "../index";
 import { roomStore, tokenStore } from "../store";
-import type { StoredRoom } from "../types";
+import type { QuizServer, QuizSocket, StoredRoom } from "../types";
 import { makePlayer, makeRoom } from "./helpers";
 
 /** Only the logger method the helper calls. */
@@ -22,7 +21,7 @@ const makeIo = () => {
         emitted.push({ room, event, payload });
       },
     }),
-  } as unknown as Server;
+  } as unknown as QuizServer;
   return { io, emitted };
 };
 
@@ -35,7 +34,7 @@ const makeSocket = (data: Record<string, unknown>, id = "socket-1") => {
     leave: (room: string) => {
       left.push(room);
     },
-  } as unknown as Socket;
+  } as unknown as QuizSocket;
   return { socket, left, data };
 };
 

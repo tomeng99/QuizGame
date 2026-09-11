@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 
 import { registerRealtimeHandlers } from "./events";
 import { roomStore } from "./store";
+import type { QuizServer } from "./types";
 
 export {
   HOST_RECONNECT_GRACE_MS,
@@ -25,7 +26,7 @@ export {
   toSnapshot,
   withServerClock,
 } from "./snapshots";
-export type { StoredPlayer, StoredRoom } from "./types";
+export type { QuizServer, QuizSocket, StoredPlayer, StoredRoom } from "./types";
 // ── Re-exports for testability ────────────────────────────────────────────────
 export { isFiniteNumber, isString, normalizeQuestion, normalizeQuiz } from "./validation";
 
@@ -45,7 +46,7 @@ const allowedOrigins = parseAllowedOrigins();
 
 const app = Fastify({ logger: true });
 
-let io: Server;
+let io: QuizServer;
 
 const main = async () => {
   await app.register(cors, {

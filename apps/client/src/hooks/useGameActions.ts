@@ -1,3 +1,4 @@
+import type { SubmitAnswerPayload } from "@quizgame/contracts";
 import { useEffect, useMemo } from "react";
 
 import { validateQuiz } from "../helpers";
@@ -85,11 +86,7 @@ export function useGameActions(game: GameState, editor: QuizEditor) {
       return;
     }
 
-    let payload:
-      | { roomCode: string; type: "multiple-choice" | "poll"; optionId: string }
-      | { roomCode: string; type: "number"; guess: number }
-      | { roomCode: string; type: "ranking"; order: string[] }
-      | null = null;
+    let payload: SubmitAnswerPayload | null = null;
 
     switch (game.currentQuestion.type) {
       case "multiple-choice":
