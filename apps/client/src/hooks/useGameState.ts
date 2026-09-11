@@ -7,15 +7,14 @@ import type {
   RoomSnapshot,
 } from "@quizgame/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Socket } from "socket.io-client";
 import { clearRoomCodeFromUrl, getRoomCodeFromUrl } from "../config";
-import type { ConnectionState, FeedbackState, PendingAction, Screen } from "../types";
+import type { ConnectionState, FeedbackState, PendingAction, QuizSocket, Screen } from "../types";
 import { useSessionStorage } from "./useSessionStorage";
 import { useSocketConnection } from "./useSocketConnection";
 
 export interface GameState {
   /* ── Refs ── */
-  socketRef: React.RefObject<Socket | null>;
+  socketRef: React.RefObject<QuizSocket | null>;
 
   /* ── Navigation ── */
   screen: Screen;
@@ -72,7 +71,7 @@ export interface GameState {
 
 export function useGameState(): GameState {
   // ── Refs ──
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<QuizSocket | null>(null);
   const screenRef = useRef<Screen>("join-code");
   const roomRef = useRef<RoomSnapshot | null>(null);
   /** Tracks isHost synchronously so the connect handler can read it without stale closure. */

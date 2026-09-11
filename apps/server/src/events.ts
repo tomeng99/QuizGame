@@ -14,7 +14,6 @@ import type {
 } from "@quizgame/contracts";
 import { randomUUID } from "crypto";
 import type { FastifyBaseLogger } from "fastify";
-import type { Server, Socket } from "socket.io";
 import {
   HOST_RECONNECT_GRACE_MS,
   MAX_NAME_LENGTH,
@@ -25,16 +24,16 @@ import { checkRateLimit, rateLimits } from "./rateLimit";
 import { createRoomCode } from "./roomCode";
 import { toGameSummary, toPublicQuestion, toSnapshot, withServerClock } from "./snapshots";
 import { roomStore, tokenStore } from "./store";
-import type { StoredPlayer, StoredRoom } from "./types";
+import type { QuizServer, QuizSocket, StoredPlayer, StoredRoom } from "./types";
 import { isFiniteNumber, isString, normalizeQuiz } from "./validation";
 
 // ── Emit helpers ──────────────────────────────────────────────────────────────
 
-const emitRoomUpdate = (io: Server, room: StoredRoom) => {
+const emitRoomUpdate = (io: QuizServer, room: StoredRoom) => {
   io.to(room.code).emit("room:update", toSnapshot(room));
 };
 
-const emitRoomClosed = (io: Server, room: StoredRoom, message: string) => {
+const emitRoomClosed = (io: QuizServer, room: StoredRoom, message: string) => {
   io.to(room.code).emit("room:closed", { message });
 };
 
@@ -103,7 +102,7 @@ const recordRoundResult = (room: StoredRoom, question: QuizQuestion) => {
   });
 };
 
-const emitLeaderboard = (io: Server, log: FastifyBaseLogger, room: StoredRoom) => {
+const emitLeaderboard = (io: QuizServer, log: FastifyBaseLogger, room: StoredRoom) => {
   // Cancel any pending auto-advance timer so the leaderboard is only shown once.
   if (room.questionAutoTimer !== null) {
     clearTimeout(room.questionAutoTimer);
@@ -231,7 +230,7 @@ const emitLeaderboard = (io: Server, log: FastifyBaseLogger, room: StoredRoom) =
  * Called after each answer instead of the full room snapshot, reducing
  * broadcast volume from O(N²) to O(N) during the answering phase.
  */
-const emitAnswerCount = (io: Server, room: StoredRoom) => {
+const emitAnswerCount = (io: QuizServer, room: StoredRoom) => {
   const question =
     room.currentQuestionIndex !== null ? room.quiz.questions[room.currentQuestionIndex] : null;
   const answeredCount = question
@@ -245,7 +244,7 @@ const emitAnswerCount = (io: Server, room: StoredRoom) => {
   io.to(room.code).emit("room:answer-count", payload);
 };
 
-const emitError = (socket: Socket, message: string) => {
+const emitError = (socket: QuizSocket, message: string) => {
   socket.emit("error:message", { message });
 };
 
@@ -269,12 +268,8 @@ const emitError = (socket: Socket, message: string) => {
  * Only player seats are released here. A host walking away from a room needs the
  * room itself torn down rather than one seat freed, which is a separate concern.
  */
-export const releasePlayerSeat = (io: Server, log: FastifyBaseLogger, socket: Socket) => {
-  const { roomCode, role, playerId } = socket.data as {
-    roomCode?: string;
-    role?: "host" | "player";
-    playerId?: string;
-  };
+export const releasePlayerSeat = (io: QuizServer, log: FastifyBaseLogger, socket: QuizSocket) => {
+  const { roomCode, role, playerId } = socket.data;
 
   // Cleared up front so a socket that fails any check below still cannot be
   // treated as seated afterwards.
@@ -311,7 +306,7 @@ export const releasePlayerSeat = (io: Server, log: FastifyBaseLogger, socket: So
 // ── Game lifecycle ────────────────────────────────────────────────────────────
 
 const startQuestion = (
-  io: Server,
+  io: QuizServer,
   log: FastifyBaseLogger,
   room: StoredRoom,
   questionIndex: number,
@@ -378,7 +373,7 @@ const deleteRoom = (log: FastifyBaseLogger, room: StoredRoom) => {
   log.info({ roomCode: room.code }, "room deleted");
 };
 
-const finishGame = (io: Server, log: FastifyBaseLogger, room: StoredRoom) => {
+const finishGame = (io: QuizServer, log: FastifyBaseLogger, room: StoredRoom) => {
   if (room.questionAutoTimer !== null) {
     clearTimeout(room.questionAutoTimer);
     room.questionAutoTimer = null;
@@ -408,8 +403,8 @@ const finishGame = (io: Server, log: FastifyBaseLogger, room: StoredRoom) => {
  * room state so the client can restore its UI without a full page reload.
  */
 const restoreSocketToRoom = (
-  io: Server,
-  socket: Socket,
+  io: QuizServer,
+  socket: QuizSocket,
   room: StoredRoom,
   token: string,
   role: "host" | "player",
@@ -450,7 +445,7 @@ const restoreSocketToRoom = (
 
 // ── Realtime event handlers ───────────────────────────────────────────────────
 
-export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => {
+export const registerRealtimeHandlers = (io: QuizServer, log: FastifyBaseLogger) => {
   io.on("connection", (socket) => {
     // ── Host: create a new room ──────────────────────────────────────────────
 
@@ -882,7 +877,8 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
 
       // Identify the answering player from server-held socket state, never from the
       // payload — a client cannot nominate whose score it is submitting against.
-      const player = room.players.get(socket.data.playerId as string);
+      const { playerId } = socket.data;
+      const player = playerId ? room.players.get(playerId) : undefined;
 
       if (!player) {
         emitError(socket, "Join the room before answering.");
@@ -1053,11 +1049,7 @@ export const registerRealtimeHandlers = (io: Server, log: FastifyBaseLogger) => 
       // Clean up per-socket rate-limit data to avoid memory growth.
       rateLimits.delete(socket.id);
 
-      const { roomCode, role, playerId } = socket.data as {
-        roomCode?: string;
-        role?: "host" | "player";
-        playerId?: string;
-      };
+      const { roomCode, role, playerId } = socket.data;
 
       if (!roomCode) return;
 

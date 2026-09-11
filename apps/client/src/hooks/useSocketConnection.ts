@@ -1,20 +1,15 @@
 import type {
   AnswerAcceptedPayload,
-  AnswerCountPayload,
   CheckRoomResult,
-  ErrorMessagePayload,
-  GameFinishedPayload,
   GameSummary,
   PublicQuestion,
   QuestionRevealPayload,
-  RoomJoinedPayload,
-  RoomRejoinedPayload,
   RoomSnapshot,
 } from "@quizgame/contracts";
 import { useEffect } from "react";
-import { io, type Socket } from "socket.io-client";
+import { io } from "socket.io-client";
 import { API_BASE } from "../config";
-import type { ConnectionState, FeedbackState, PendingAction, Screen } from "../types";
+import type { ConnectionState, FeedbackState, PendingAction, QuizSocket, Screen } from "../types";
 import type { UseSessionStorage } from "./useSessionStorage";
 
 /**
@@ -23,7 +18,7 @@ import type { UseSessionStorage } from "./useSessionStorage";
  * owner of the public state shape.
  */
 export interface UseSocketConnectionConfig extends UseSessionStorage {
-  socketRef: React.RefObject<Socket | null>;
+  socketRef: React.RefObject<QuizSocket | null>;
   /** Tracks `screen` synchronously so event handlers read it without stale closures. */
   screenRef: React.RefObject<Screen>;
   /** Tracks `room` synchronously for the reconnect feedback message. */
@@ -97,7 +92,7 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
   } = config;
 
   useEffect(() => {
-    const socket = io(API_BASE, { transports: ["websocket"] });
+    const socket: QuizSocket = io(API_BASE, { transports: ["websocket"] });
 
     socket.on("connect", () => {
       setConnectionState("connected");
@@ -146,7 +141,7 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
       });
     });
 
-    socket.on("room:checked", (result: CheckRoomResult) => {
+    socket.on("room:checked", (result) => {
       setCheckedRoom(result);
       setRoomCodeInput(result.roomCode);
       setScreen("join-name");
@@ -157,7 +152,7 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
       });
     });
 
-    socket.on("room:joined", (payload: RoomJoinedPayload) => {
+    socket.on("room:joined", (payload) => {
       const isHostJoin = screenRef.current === "host-setup";
       const role: "host" | "player" = isHostJoin ? "host" : "player";
 
@@ -192,7 +187,7 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
       }
     });
 
-    socket.on("room:rejoined", (payload: RoomRejoinedPayload) => {
+    socket.on("room:rejoined", (payload) => {
       pendingReconnectRef.current = false;
 
       // The server echoes our public id back, so we no longer have to infer it
@@ -237,12 +232,12 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
       setFeedback({ tone: "success", message: "Reconnected!" });
     });
 
-    socket.on("room:update", (snapshot: RoomSnapshot) => {
+    socket.on("room:update", (snapshot) => {
       setRoom(snapshot);
       setPendingAction(null);
     });
 
-    socket.on("question:started", (question: PublicQuestion) => {
+    socket.on("question:started", (question) => {
       setCurrentQuestion(question);
       setSelectedOptionId(null);
       if (question.type === "number") {
@@ -269,7 +264,7 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
     // Narrow event: the server confirms this player's answer was accepted.
     // Payload carries isCorrect, pointsEarned, and the new streak value so the
     // GameScreen can show a contextual result card without a full snapshot round-trip.
-    socket.on("answer:accepted", (payload: AnswerAcceptedPayload) => {
+    socket.on("answer:accepted", (payload) => {
       setHasAnsweredCurrentQuestion(true);
       setLastAnswerResult(payload);
     });
@@ -277,16 +272,16 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
     // The server emits "question:revealed" immediately before "leaderboard:update"
     // whenever a question closes (either all players answered or the timer expired).
     // We store the correctOptionId so the option buttons can highlight green/red.
-    socket.on("question:revealed", (payload: QuestionRevealPayload) => {
+    socket.on("question:revealed", (payload) => {
       setQuestionReveal(payload);
     });
 
     // Narrow event: lightweight count update broadcast to all room members per answer.
-    socket.on("room:answer-count", (payload: AnswerCountPayload) => {
+    socket.on("room:answer-count", (payload) => {
       setAnsweredCount(payload.answeredCount);
     });
 
-    socket.on("leaderboard:update", (snapshot: RoomSnapshot) => {
+    socket.on("leaderboard:update", (snapshot) => {
       setRoom(snapshot);
       setPendingAction(null);
       setFeedback({
@@ -298,7 +293,7 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
       });
     });
 
-    socket.on("game:finished", (snapshot: GameFinishedPayload) => {
+    socket.on("game:finished", (snapshot) => {
       setRoom(snapshot);
       setCurrentQuestion(null);
       setSelectedOptionId(null);
@@ -316,13 +311,13 @@ export function useSocketConnection(config: UseSocketConnectionConfig): void {
       });
     });
 
-    socket.on("room:closed", (payload: ErrorMessagePayload) => {
+    socket.on("room:closed", (payload) => {
       resetToStart();
       setPendingAction(null);
       setFeedback({ tone: "error", message: payload.message });
     });
 
-    socket.on("error:message", (payload: ErrorMessagePayload) => {
+    socket.on("error:message", (payload) => {
       // If a reconnect attempt just failed, clear the stale session so the
       // next page load starts fresh instead of looping on a dead token.
       if (pendingReconnectRef.current) {

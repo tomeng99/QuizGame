@@ -275,6 +275,70 @@ export interface HostReconnectPayload {
   token: string;
 }
 
+// ── Socket protocol ───────────────────────────────────────────────────────────
+
+/**
+ * Every event the server sends, with the payload it carries.
+ *
+ * This is the wire protocol, and it is the reason the payload interfaces above
+ * exist: passed to socket.io's generics on both sides, it makes a mistyped event
+ * name or a payload of the wrong shape a compile error instead of an event that
+ * silently never arrives. Add an event here before wiring it up anywhere else.
+ *
+ * Both apps move together when this changes — see the deploy note on
+ * `GameFinishedPayload` for what an old client does with a newer payload.
+ */
+export interface ServerToClientEvents {
+  "room:checked": (result: CheckRoomResult) => void;
+  "room:joined": (payload: RoomJoinedPayload) => void;
+  "room:rejoined": (payload: RoomRejoinedPayload) => void;
+  "room:update": (snapshot: RoomSnapshot) => void;
+  "room:answer-count": (payload: AnswerCountPayload) => void;
+  "room:closed": (payload: ErrorMessagePayload) => void;
+  "question:started": (question: PublicQuestion) => void;
+  "question:revealed": (payload: QuestionRevealPayload) => void;
+  "answer:accepted": (payload: AnswerAcceptedPayload) => void;
+  "leaderboard:update": (snapshot: RoomSnapshot) => void;
+  "game:finished": (payload: GameFinishedPayload) => void;
+  "error:message": (payload: ErrorMessagePayload) => void;
+}
+
+/**
+ * Every event a client sends, with the payload a well-behaved client sends with it.
+ *
+ * These shapes describe intent, not a guarantee: anyone can open a socket and emit
+ * whatever they like, so the server still takes each of these as `unknown` and
+ * validates it before use. What this buys on the server side is the event *names* —
+ * a handler registered for an event no client sends is a compile error.
+ */
+export interface ClientToServerEvents {
+  "host:create-room": (payload: HostCreateRoomPayload) => void;
+  "host:start-game": (roomCode: string) => void;
+  "host:show-leaderboard": (roomCode: string) => void;
+  "host:next-question": (roomCode: string) => void;
+  "host:reconnect": (payload: HostReconnectPayload) => void;
+  "player:check-room": (payload: CheckRoomPayload) => void;
+  "player:join-room": (payload: PlayerJoinPayload) => void;
+  "player:reconnect": (payload: PlayerReconnectPayload) => void;
+  "player:submit-answer": (payload: SubmitAnswerPayload) => void;
+}
+
+/**
+ * What the server hangs off `socket.data` — the seat this connection currently holds.
+ *
+ * Server-side only (it never crosses the wire), but it lives here so socket.io's
+ * `SocketData` generic is filled in from the same place as the rest of the protocol.
+ * Every field is optional because a socket starts out holding no seat at all.
+ */
+export interface SocketSessionData {
+  roomCode?: string;
+  role?: "host" | "player";
+  /** The seat's secret reconnect token. Never sent to anyone but its owner. */
+  token?: string;
+  /** This connection's public player id — the host's id when `role` is "host". */
+  playerId?: string;
+}
+
 export const createEmptyQuestion = (index: number): MultipleChoiceQuestion => ({
   id: `question-${index + 1}`,
   type: "multiple-choice",
